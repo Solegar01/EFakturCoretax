@@ -10,6 +10,7 @@ namespace EFakturCoretax.Helpers
 {
     public static class FormHelper
     {
+        private static SAPbouiCOM.ProgressBar _pb;
         public static void ClearCombo(SAPbouiCOM.Form form, string id)
         {
             try
@@ -402,6 +403,28 @@ namespace EFakturCoretax.Helpers
             }
         }
 
+        public static void SetVisible(SAPbouiCOM.Form oForm, string[] itemIds, bool visible)
+        {
+            try
+            {
+                foreach (var id in itemIds)
+                {
+                    if (!visible && oForm.ActiveItem == id)
+                    {
+                        RemoveFocus(oForm);
+                    }
+
+                    oForm.Items.Item(id).Visible = visible;
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+
         public static void SetValueEdit(SAPbouiCOM.Form oForm, string id, string val)
         {
             try
@@ -479,6 +502,11 @@ namespace EFakturCoretax.Helpers
         public static List<InvoiceDataModel> BuildInvoiceDetailList(SAPbouiCOM.DBDataSource oDBDS_Detail)
         {
             var listData = new List<InvoiceDataModel>();
+
+            if (oDBDS_Detail.Size == 1 && string.IsNullOrEmpty(oDBDS_Detail.GetValue("U_T2_DocEntry",0)?.Trim()))
+            {
+                return listData;
+            }
 
             for (int i = 0; i < oDBDS_Detail.Size; i++)
             {
@@ -623,5 +651,28 @@ namespace EFakturCoretax.Helpers
             }
             
         }
+
+        public static void StartLoading(SAPbouiCOM.Form oForm, string pbText, int max, bool stopable)
+        {
+            if (_pb != null) { _pb.Stop(); System.Runtime.InteropServices.Marshal.ReleaseComObject(_pb); _pb = null; }
+            _pb = Application.SBO_Application.StatusBar.CreateProgressBar(pbText, max, stopable);
+            oForm.Freeze(true);
+        }
+
+        public static void FinishLoading(SAPbouiCOM.Form oForm)
+        {
+            if (_pb != null) { _pb.Stop(); System.Runtime.InteropServices.Marshal.ReleaseComObject(_pb); _pb = null; }
+            oForm.Freeze(false);
+        }
+
+        public static void SetTextValueLoading(SAPbouiCOM.Form oForm, int value = 0, string text = "")
+        {
+            _pb.Value = value;
+            if (!string.IsNullOrEmpty(text))
+            {
+                _pb.Text = text;
+            }
+        }
+
     }
 }

@@ -141,5 +141,44 @@ namespace EFakturCoretax.Helpers
                 throw;
             }
         }
+
+        public static Dictionary<string, string> GetDataSeries(SAPbouiCOM.Form oForm, string udoCode)
+        {
+            Dictionary<string, string> result = new Dictionary<string, string>();
+            try
+            {
+                Company oCompany = Services.CompanyService.GetCompany();
+                // Build SQL depending on FormMode
+                string sql = $@"
+                            SELECT Series AS Code, SeriesName AS Name
+                            FROM NNM1 
+                            WHERE ObjectCode = '{udoCode}' ";
+
+                if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_ADD_MODE)
+                {
+                    sql += " AND Locked = 'N' ";
+                }
+
+                sql += " ORDER BY Series DESC";
+
+                SAPbobsCOM.Recordset oRS = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+                oRS.DoQuery(sql);
+
+                while (!oRS.EoF)
+                {
+                    string code = oRS.Fields.Item("Code").Value.ToString();
+                    string name = oRS.Fields.Item("Name").Value.ToString();
+
+                    result.Add(code, name);
+                    oRS.MoveNext();
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
     }
 }

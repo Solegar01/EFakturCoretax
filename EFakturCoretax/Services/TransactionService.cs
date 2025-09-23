@@ -265,8 +265,8 @@ namespace EFakturCoretax.Services
 
                     // update posting date before close
                     oGeneralData = oGeneralService.GetByParams(oGeneralParams);
-                    oGeneralData.SetProperty("U_T2_Posting_Date", DateTime.Today);
-                    oGeneralService.Update(oGeneralData);
+                    //oGeneralData.SetProperty("U_T2_Posting_Date", DateTime.Today);
+                    //oGeneralService.Update(oGeneralData);
 
                     // close the document
                     oGeneralService.Close(oGeneralParams);
@@ -610,76 +610,175 @@ namespace EFakturCoretax.Services
 
         public static Task<List<InvoiceDataModel>> GetDataGenerate(List<FilterDataModel> filteredHeader)
         {
-            return Task.Run(() => {
+            return Task.Run(() =>
+            {
                 List<InvoiceDataModel> result = new List<InvoiceDataModel>();
                 SAPbobsCOM.Company oCompany = Services.CompanyService.GetCompany();
                 SAPbobsCOM.Recordset rs = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
-                foreach (var item in filteredHeader)
+
+                // --- group headers by ObjType ---
+                var dict = filteredHeader
+                    .GroupBy(x => x.ObjType)
+                    .ToDictionary(g => g.Key, g => g.Select(x => x.DocEntry).ToList());
+
+                // --- build JSON ---
+                var payload = dict.Select(g => new
                 {
-                    string query = $@"EXEC [dbo].[T2_SP_CORETAX_GENERATE] 
-    @DocEntry = '{item.DocEntry}', @ObjectType = '{item.ObjType}'";
-                    rs.DoQuery(query);
+                    ObjType = g.Key,
+                    DocEntries = string.Join(",", g.Value)
+                }).ToList();
 
-                    while (!rs.EoF)
+                // --- build JSON manually ---
+                string json = "[" + string.Join(",", dict.Select(g =>
+                    "{ \"ObjType\": \"" + g.Key + "\", \"DocEntries\": \"" + string.Join(",", g.Value) + "\" }"
+                )) + "]";
+
+                // --- execute new SP ---
+                string query = $@"EXEC [dbo].[T2_SP_CORETAX_GENERATE] @DocList = N'{json}'";
+                rs.DoQuery(query);
+
+                while (!rs.EoF)
+                {
+                    var model = new InvoiceDataModel
                     {
-                        var model = new InvoiceDataModel
-                        {
-                            //No = rs.Fields.Item("No").Value?.ToString(),
-                            TIN = rs.Fields.Item("TIN").Value?.ToString(),
-                            DocEntry = rs.Fields.Item("DocEntry").Value?.ToString(),
-                            LineNum = rs.Fields.Item("LineNum").Value?.ToString(),
-                            InvDate = rs.Fields.Item("InvDate").Value?.ToString(),
-                            NoDocument = rs.Fields.Item("NoDocument").Value?.ToString(),
-                            ObjectType = rs.Fields.Item("ObjectType").Value?.ToString(),
-                            ObjectName = rs.Fields.Item("ObjectName").Value?.ToString(),
-                            BPCode = rs.Fields.Item("BPCode").Value?.ToString(),
-                            BPName = rs.Fields.Item("BPName").Value?.ToString(),
-                            SellerIDTKU = rs.Fields.Item("SellerIDTKU").Value?.ToString(),
-                            BuyerDocument = rs.Fields.Item("BuyerDocument").Value?.ToString(),
-                            NomorNPWP = rs.Fields.Item("NomorNPWP").Value?.ToString(),
-                            NPWPName = rs.Fields.Item("NPWPName").Value?.ToString(),
-                            NPWPAddress = rs.Fields.Item("NPWPAddress").Value?.ToString(),
-                            BuyerIDTKU = rs.Fields.Item("BuyerIDTKU").Value?.ToString(),
-                            ItemCode = rs.Fields.Item("ItemCode").Value?.ToString(),
-                            DefItemCode = rs.Fields.Item("DefItemCode").Value?.ToString(),
-                            ItemName = rs.Fields.Item("ItemName").Value?.ToString(),
-                            ItemUnit = rs.Fields.Item("ItemUnit").Value?.ToString(),
+                        TIN = rs.Fields.Item("TIN").Value?.ToString(),
+                        DocEntry = rs.Fields.Item("DocEntry").Value?.ToString(),
+                        LineNum = rs.Fields.Item("LineNum").Value?.ToString(),
+                        InvDate = rs.Fields.Item("InvDate").Value?.ToString(),
+                        NoDocument = rs.Fields.Item("NoDocument").Value?.ToString(),
+                        ObjectType = rs.Fields.Item("ObjectType").Value?.ToString(),
+                        ObjectName = rs.Fields.Item("ObjectName").Value?.ToString(),
+                        BPCode = rs.Fields.Item("BPCode").Value?.ToString(),
+                        BPName = rs.Fields.Item("BPName").Value?.ToString(),
+                        SellerIDTKU = rs.Fields.Item("SellerIDTKU").Value?.ToString(),
+                        BuyerDocument = rs.Fields.Item("BuyerDocument").Value?.ToString(),
+                        NomorNPWP = rs.Fields.Item("NomorNPWP").Value?.ToString(),
+                        NPWPName = rs.Fields.Item("NPWPName").Value?.ToString(),
+                        NPWPAddress = rs.Fields.Item("NPWPAddress").Value?.ToString(),
+                        BuyerIDTKU = rs.Fields.Item("BuyerIDTKU").Value?.ToString(),
+                        ItemCode = rs.Fields.Item("ItemCode").Value?.ToString(),
+                        DefItemCode = rs.Fields.Item("DefItemCode").Value?.ToString(),
+                        ItemName = rs.Fields.Item("ItemName").Value?.ToString(),
+                        ItemUnit = rs.Fields.Item("ItemUnit").Value?.ToString(),
 
-                            // --- decimals (safe conversion) ---
-                            ItemPrice = Convert.ToDouble(rs.Fields.Item("ItemPrice").Value ?? 0),
-                            Qty = Convert.ToDouble(rs.Fields.Item("Qty").Value ?? 0),
-                            TotalDisc = Convert.ToDouble(rs.Fields.Item("TotalDisc").Value ?? 0),
-                            TaxBase = Convert.ToDouble(rs.Fields.Item("TaxBase").Value ?? 0),
-                            OtherTaxBase = Convert.ToDouble(rs.Fields.Item("OtherTaxBase").Value ?? 0),
-                            VATRate = Convert.ToDouble(rs.Fields.Item("VATRate").Value ?? 0),
-                            AmountVAT = Convert.ToDouble(rs.Fields.Item("AmountVAT").Value ?? 0),
-                            STLGRate = Convert.ToDouble(rs.Fields.Item("STLGRate").Value ?? 0),
-                            STLG = Convert.ToDouble(rs.Fields.Item("STLG").Value ?? 0),
+                        // decimals
+                        ItemPrice = Convert.ToDouble(rs.Fields.Item("ItemPrice").Value ?? 0),
+                        Qty = Convert.ToDouble(rs.Fields.Item("Qty").Value ?? 0),
+                        TotalDisc = Convert.ToDouble(rs.Fields.Item("TotalDisc").Value ?? 0),
+                        TaxBase = Convert.ToDouble(rs.Fields.Item("TaxBase").Value ?? 0),
+                        OtherTaxBase = Convert.ToDouble(rs.Fields.Item("OtherTaxBase").Value ?? 0),
+                        VATRate = Convert.ToDouble(rs.Fields.Item("VATRate").Value ?? 0),
+                        AmountVAT = Convert.ToDouble(rs.Fields.Item("AmountVAT").Value ?? 0),
+                        STLGRate = Convert.ToDouble(rs.Fields.Item("STLGRate").Value ?? 0),
+                        STLG = Convert.ToDouble(rs.Fields.Item("STLG").Value ?? 0),
 
-                            // --- strings ---
-                            JenisPajak = rs.Fields.Item("JenisPajak").Value?.ToString(),
-                            KetTambahan = rs.Fields.Item("KetTambahan").Value?.ToString(),
-                            PajakPengganti = rs.Fields.Item("PajakPengganti").Value?.ToString(),
-                            Referensi = rs.Fields.Item("Referensi").Value?.ToString(),
-                            Status = rs.Fields.Item("Status").Value?.ToString(),
-                            KodeDokumenPendukung = rs.Fields.Item("KodeDokumenPendukung").Value?.ToString(),
-                            BranchCode = rs.Fields.Item("BranchCode").Value?.ToString(),
-                            BranchName = rs.Fields.Item("BranchName").Value?.ToString(),
-                            OutletCode = rs.Fields.Item("OutletCode").Value?.ToString(),
-                            OutletName = rs.Fields.Item("OutletName").Value?.ToString(),
-                            AddInfo = rs.Fields.Item("AddInfo").Value?.ToString(),
-                            BuyerCountry = rs.Fields.Item("BuyerCountry").Value?.ToString(),
-                            BuyerEmail = rs.Fields.Item("BuyerEmail").Value?.ToString(),
-                        };
+                        // strings
+                        JenisPajak = rs.Fields.Item("JenisPajak").Value?.ToString(),
+                        KetTambahan = rs.Fields.Item("KetTambahan").Value?.ToString(),
+                        PajakPengganti = rs.Fields.Item("PajakPengganti").Value?.ToString(),
+                        Referensi = rs.Fields.Item("Referensi").Value?.ToString(),
+                        Status = rs.Fields.Item("Status").Value?.ToString(),
+                        KodeDokumenPendukung = rs.Fields.Item("KodeDokumenPendukung").Value?.ToString(),
+                        BranchCode = rs.Fields.Item("BranchCode").Value?.ToString(),
+                        BranchName = rs.Fields.Item("BranchName").Value?.ToString(),
+                        OutletCode = rs.Fields.Item("OutletCode").Value?.ToString(),
+                        OutletName = rs.Fields.Item("OutletName").Value?.ToString(),
+                        AddInfo = rs.Fields.Item("AddInfo").Value?.ToString(),
+                        BuyerCountry = rs.Fields.Item("BuyerCountry").Value?.ToString(),
+                        BuyerEmail = rs.Fields.Item("BuyerEmail").Value?.ToString(),
+                    };
 
-                        result.Add(model);
-                        rs.MoveNext();
-                    }
-
+                    result.Add(model);
+                    rs.MoveNext();
                 }
+
                 return Task.FromResult(result);
             });
         }
+
+
+        //public static Task<List<InvoiceDataModel>> GetDataGenerate(List<FilterDataModel> filteredHeader)
+        //{
+        //    return Task.Run(() =>
+        //    {
+        //        List<InvoiceDataModel> result = new List<InvoiceDataModel>();
+        //        SAPbobsCOM.Company oCompany = Services.CompanyService.GetCompany();
+        //        SAPbobsCOM.Recordset rs = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+        //        var dict = filteredHeader
+        //        .GroupBy(x => x.ObjType)
+        //        .ToDictionary(g => g.Key, g => g.ToList());
+
+        //        foreach (var key in dict.Keys)
+        //        {
+        //            var invDict = dict[key];
+        //            if (invDict.Any())
+        //            {
+        //                var docEntryCsv = string.Join(",", invDict.Select(x => x.DocEntry));
+        //                string query = $@"EXEC [dbo].[T2_SP_CORETAX_GENERATE] 
+        //                @DocList = '{docEntryCsv}', @ObjectType = '{key}'";
+        //                rs.DoQuery(query);
+
+        //                while (!rs.EoF)
+        //                {
+        //                    var model = new InvoiceDataModel
+        //                    {
+        //                        //No = rs.Fields.Item("No").Value?.ToString(),
+        //                        TIN = rs.Fields.Item("TIN").Value?.ToString(),
+        //                        DocEntry = rs.Fields.Item("DocEntry").Value?.ToString(),
+        //                        LineNum = rs.Fields.Item("LineNum").Value?.ToString(),
+        //                        InvDate = rs.Fields.Item("InvDate").Value?.ToString(),
+        //                        NoDocument = rs.Fields.Item("NoDocument").Value?.ToString(),
+        //                        ObjectType = rs.Fields.Item("ObjectType").Value?.ToString(),
+        //                        ObjectName = rs.Fields.Item("ObjectName").Value?.ToString(),
+        //                        BPCode = rs.Fields.Item("BPCode").Value?.ToString(),
+        //                        BPName = rs.Fields.Item("BPName").Value?.ToString(),
+        //                        SellerIDTKU = rs.Fields.Item("SellerIDTKU").Value?.ToString(),
+        //                        BuyerDocument = rs.Fields.Item("BuyerDocument").Value?.ToString(),
+        //                        NomorNPWP = rs.Fields.Item("NomorNPWP").Value?.ToString(),
+        //                        NPWPName = rs.Fields.Item("NPWPName").Value?.ToString(),
+        //                        NPWPAddress = rs.Fields.Item("NPWPAddress").Value?.ToString(),
+        //                        BuyerIDTKU = rs.Fields.Item("BuyerIDTKU").Value?.ToString(),
+        //                        ItemCode = rs.Fields.Item("ItemCode").Value?.ToString(),
+        //                        DefItemCode = rs.Fields.Item("DefItemCode").Value?.ToString(),
+        //                        ItemName = rs.Fields.Item("ItemName").Value?.ToString(),
+        //                        ItemUnit = rs.Fields.Item("ItemUnit").Value?.ToString(),
+
+        //                        // --- decimals (safe conversion) ---
+        //                        ItemPrice = Convert.ToDouble(rs.Fields.Item("ItemPrice").Value ?? 0),
+        //                        Qty = Convert.ToDouble(rs.Fields.Item("Qty").Value ?? 0),
+        //                        TotalDisc = Convert.ToDouble(rs.Fields.Item("TotalDisc").Value ?? 0),
+        //                        TaxBase = Convert.ToDouble(rs.Fields.Item("TaxBase").Value ?? 0),
+        //                        OtherTaxBase = Convert.ToDouble(rs.Fields.Item("OtherTaxBase").Value ?? 0),
+        //                        VATRate = Convert.ToDouble(rs.Fields.Item("VATRate").Value ?? 0),
+        //                        AmountVAT = Convert.ToDouble(rs.Fields.Item("AmountVAT").Value ?? 0),
+        //                        STLGRate = Convert.ToDouble(rs.Fields.Item("STLGRate").Value ?? 0),
+        //                        STLG = Convert.ToDouble(rs.Fields.Item("STLG").Value ?? 0),
+
+        //                        // --- strings ---
+        //                        JenisPajak = rs.Fields.Item("JenisPajak").Value?.ToString(),
+        //                        KetTambahan = rs.Fields.Item("KetTambahan").Value?.ToString(),
+        //                        PajakPengganti = rs.Fields.Item("PajakPengganti").Value?.ToString(),
+        //                        Referensi = rs.Fields.Item("Referensi").Value?.ToString(),
+        //                        Status = rs.Fields.Item("Status").Value?.ToString(),
+        //                        KodeDokumenPendukung = rs.Fields.Item("KodeDokumenPendukung").Value?.ToString(),
+        //                        BranchCode = rs.Fields.Item("BranchCode").Value?.ToString(),
+        //                        BranchName = rs.Fields.Item("BranchName").Value?.ToString(),
+        //                        OutletCode = rs.Fields.Item("OutletCode").Value?.ToString(),
+        //                        OutletName = rs.Fields.Item("OutletName").Value?.ToString(),
+        //                        AddInfo = rs.Fields.Item("AddInfo").Value?.ToString(),
+        //                        BuyerCountry = rs.Fields.Item("BuyerCountry").Value?.ToString(),
+        //                        BuyerEmail = rs.Fields.Item("BuyerEmail").Value?.ToString(),
+        //                    };
+
+        //                    result.Add(model);
+        //                    rs.MoveNext();
+        //                }
+        //            }
+        //        }
+        //        return Task.FromResult(result);
+        //    });
+        //}
 
         public static Task<int> GetLastDocNum(int seriesId)
         {

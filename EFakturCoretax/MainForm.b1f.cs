@@ -49,7 +49,7 @@ namespace EFakturCoretax
             this.EditText11 = ((SAPbouiCOM.EditText)(this.GetItem("TDocNum").Specific));
             this.StaticText18 = ((SAPbouiCOM.StaticText)(this.GetItem("LStatus").Specific));
             this.StaticText19 = ((SAPbouiCOM.StaticText)(this.GetItem("LPostDt").Specific));
-            this.EditText13 = ((SAPbouiCOM.EditText)(this.GetItem("Item_33").Specific));
+            this.EditText13 = ((SAPbouiCOM.EditText)(this.GetItem("TPostDate").Specific));
             this.CheckBox3 = ((SAPbouiCOM.CheckBox)(this.GetItem("CkAllDt").Specific));
             this.CheckBox4 = ((SAPbouiCOM.CheckBox)(this.GetItem("CkAllDoc").Specific));
             this.CheckBox5 = ((SAPbouiCOM.CheckBox)(this.GetItem("CkAllCust").Specific));
@@ -61,12 +61,12 @@ namespace EFakturCoretax
             this.Button5 = ((SAPbouiCOM.Button)(this.GetItem("BtCSV").Specific));
             this.Button6 = ((SAPbouiCOM.Button)(this.GetItem("BtXML").Specific));
             this.Matrix3 = ((SAPbouiCOM.Matrix)(this.GetItem("MtDetail").Specific));
-            this.EditText14 = ((SAPbouiCOM.EditText)(this.GetItem("TSeries").Specific));
             this.EditText15 = ((SAPbouiCOM.EditText)(this.GetItem("TStatus").Specific));
             this.ComboBox0 = ((SAPbouiCOM.ComboBox)(this.GetItem("CbFromBr").Specific));
             this.ComboBox1 = ((SAPbouiCOM.ComboBox)(this.GetItem("CbFromOtl").Specific));
             this.ComboBox2 = ((SAPbouiCOM.ComboBox)(this.GetItem("CbToBr").Specific));
             this.ComboBox3 = ((SAPbouiCOM.ComboBox)(this.GetItem("CbToOtl").Specific));
+            this.ComboBox4 = ((SAPbouiCOM.ComboBox)(this.GetItem("CbSeries").Specific));
             this.OnCustomInitialize();
 
         }
@@ -128,11 +128,11 @@ namespace EFakturCoretax
         private SAPbouiCOM.Button Button5;
         private SAPbouiCOM.Button Button6;
         private SAPbouiCOM.Matrix Matrix3;
-        private SAPbouiCOM.EditText EditText14;
         private SAPbouiCOM.EditText EditText15;
         private SAPbouiCOM.ComboBox ComboBox0;
         private SAPbouiCOM.ComboBox ComboBox1;
         private SAPbouiCOM.ComboBox ComboBox2;
         private SAPbouiCOM.ComboBox ComboBox3;
+        private SAPbouiCOM.ComboBox ComboBox4;
     }
 }
