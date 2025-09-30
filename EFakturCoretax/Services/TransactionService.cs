@@ -242,47 +242,42 @@ namespace EFakturCoretax.Services
             });
         }
 
-        public static Task CloseCoretax(int docEntry)
+        public static void CloseCoretax(Company oCompany, int docEntry)
         {
-            return Task.Run(() =>
+            SAPbobsCOM.CompanyService oCompanyService = null;
+            SAPbobsCOM.GeneralService oGeneralService = null;
+            SAPbobsCOM.GeneralDataParams oGeneralParams = null;
+            SAPbobsCOM.GeneralData oGeneralData = null;
+
+            try
             {
-                SAPbobsCOM.Company oCompany = null;
-                SAPbobsCOM.CompanyService oCompanyService = null;
-                SAPbobsCOM.GeneralService oGeneralService = null;
-                SAPbobsCOM.GeneralDataParams oGeneralParams = null;
-                SAPbobsCOM.GeneralData oGeneralData = null;
+                oCompanyService = oCompany.GetCompanyService();
+                oGeneralService = (SAPbobsCOM.GeneralService)oCompanyService.GetGeneralService("T2_CORETAX");
 
-                try
-                {
-                    oCompany = CompanyService.GetCompany();
-                    oCompanyService = oCompany.GetCompanyService();
-                    oGeneralService = (SAPbobsCOM.GeneralService)oCompanyService.GetGeneralService("T2_CORETAX");
+                // identify document
+                oGeneralParams = (SAPbobsCOM.GeneralDataParams)oGeneralService.GetDataInterface(
+                    SAPbobsCOM.GeneralServiceDataInterfaces.gsGeneralDataParams);
+                oGeneralParams.SetProperty("DocEntry", docEntry);
 
-                    // identify document
-                    oGeneralParams = (SAPbobsCOM.GeneralDataParams)oGeneralService.GetDataInterface(
-                        SAPbobsCOM.GeneralServiceDataInterfaces.gsGeneralDataParams);
-                    oGeneralParams.SetProperty("DocEntry", docEntry);
+                // update posting date before close
+                oGeneralData = oGeneralService.GetByParams(oGeneralParams);
+                //oGeneralData.SetProperty("U_T2_Posting_Date", DateTime.Today);
+                //oGeneralService.Update(oGeneralData);
 
-                    // update posting date before close
-                    oGeneralData = oGeneralService.GetByParams(oGeneralParams);
-                    //oGeneralData.SetProperty("U_T2_Posting_Date", DateTime.Today);
-                    //oGeneralService.Update(oGeneralData);
-
-                    // close the document
-                    oGeneralService.Close(oGeneralParams);
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception($"Error CloseCoretax: {ex.Message}", ex);
-                }
-                finally
-                {
-                    if (oGeneralData != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(oGeneralData);
-                    if (oGeneralParams != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(oGeneralParams);
-                    if (oGeneralService != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(oGeneralService);
-                    if (oCompanyService != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(oCompanyService);
-                }
-            });
+                // close the document
+                oGeneralService.Close(oGeneralParams);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error CloseCoretax: {ex.Message}", ex);
+            }
+            finally
+            {
+                if (oGeneralData != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(oGeneralData);
+                if (oGeneralParams != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(oGeneralParams);
+                if (oGeneralService != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(oGeneralService);
+                if (oCompanyService != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(oCompanyService);
+            }
         }
 
 
@@ -803,72 +798,68 @@ namespace EFakturCoretax.Services
             }
         }
 
-        public static Task UpdateStatusInv(int docNum, List<InvoiceDataModel> datas)
+        public static void UpdateStatusInv(SAPbobsCOM.Company oCompany, string docNum, List<InvoiceDataModel> datas)
         {
-            return Task.Run(() =>
+            try
             {
-                try
+                if (datas != null && datas.Any())
                 {
-                    SAPbobsCOM.Company oCompany = CompanyService.GetCompany();
-                    if (datas != null && datas.Any())
-                    {
-                        var gInvList = datas
-                            .GroupBy(p => new
-                            {
-                                p.DocEntry,
-                                p.NoDocument,
-                                p.BPCode,
-                                p.BPName,
-                                p.ObjectType,
-                                p.ObjectName,
-                                p.InvDate,
-                                p.BranchCode,
-                                p.BranchName,
-                                p.OutletCode,
-                                p.OutletName
-                            })
-                            .Select(g => new FilterDataModel
-                            {
-                                DocEntry = g.Key.DocEntry,
-                                DocNo = g.Key.NoDocument,
-                                CardCode = g.Key.BPCode,
-                                CardName = g.Key.BPName,
-                                ObjType = g.Key.ObjectType,
-                                ObjName = g.Key.ObjectName,
-                                PostDate = g.Key.InvDate,
-                                BranchCode = g.Key.BranchCode,
-                                BranchName = g.Key.BranchName,
-                                OutletCode = g.Key.OutletCode,
-                                OutletName = g.Key.OutletName,
-                                Selected = true
-                            })
-                            .ToList();
-
-                        foreach (var item in gInvList)
+                    var gInvList = datas
+                        .GroupBy(p => new
                         {
-                            switch (item.ObjType)
-                            {
-                                case "13": // AR Invoice
-                                    UpdateArInvoice(oCompany, int.Parse(item.DocEntry), (docNum), "Y");
-                                    break;
-                                case "14": // AR Credit Memo
-                                    UpdateArCreditMemo(oCompany, int.Parse(item.DocEntry), (docNum), "Y");
-                                    break;
-                                case "203": // AR Down Payment
-                                    UpdateArDownPayment(oCompany, int.Parse(item.DocEntry), (docNum), "Y");
-                                    break;
-                            }
+                            p.DocEntry,
+                            p.NoDocument,
+                            p.BPCode,
+                            p.BPName,
+                            p.ObjectType,
+                            p.ObjectName,
+                            p.InvDate,
+                            p.BranchCode,
+                            p.BranchName,
+                            p.OutletCode,
+                            p.OutletName
+                        })
+                        .Select(g => new FilterDataModel
+                        {
+                            DocEntry = g.Key.DocEntry,
+                            DocNo = g.Key.NoDocument,
+                            CardCode = g.Key.BPCode,
+                            CardName = g.Key.BPName,
+                            ObjType = g.Key.ObjectType,
+                            ObjName = g.Key.ObjectName,
+                            PostDate = g.Key.InvDate,
+                            BranchCode = g.Key.BranchCode,
+                            BranchName = g.Key.BranchName,
+                            OutletCode = g.Key.OutletCode,
+                            OutletName = g.Key.OutletName,
+                            Selected = true
+                        })
+                        .ToList();
+
+                    foreach (var item in gInvList)
+                    {
+                        switch (item.ObjType)
+                        {
+                            case "13": // AR Invoice
+                                UpdateArInvoice(oCompany, int.Parse(item.DocEntry), docNum, "Y");
+                                break;
+                            case "14": // AR Credit Memo
+                                UpdateArCreditMemo(oCompany, int.Parse(item.DocEntry), docNum, "Y");
+                                break;
+                            case "203": // AR Down Payment
+                                UpdateArDownPayment(oCompany, int.Parse(item.DocEntry), docNum, "Y");
+                                break;
                         }
                     }
                 }
-                catch (Exception ex)
-                {
-                    throw new Exception($"Update Status Invoice error: {ex.Message}");
-                }
-            });
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Update Status Invoice error: {ex.Message}");
+            }
         }
 
-        public static void UpdateArInvoice(SAPbobsCOM.Company oCompany, int docEntry, int docNum, string status)
+        public static void UpdateArInvoice(SAPbobsCOM.Company oCompany, int docEntry, string docNum, string status)
         {
             SAPbobsCOM.Documents oInvoice = null;
 
@@ -899,7 +890,7 @@ namespace EFakturCoretax.Services
 
         }
 
-        public static void UpdateArDownPayment(SAPbobsCOM.Company oCompany, int docEntry, int docNum, string status)
+        public static void UpdateArDownPayment(SAPbobsCOM.Company oCompany, int docEntry, string docNum, string status)
         {
             SAPbobsCOM.Documents oInvoice = null;
 
@@ -931,7 +922,7 @@ namespace EFakturCoretax.Services
 
         }
 
-        public static void UpdateArCreditMemo(SAPbobsCOM.Company oCompany, int docEntry, int docNum, string status)
+        public static void UpdateArCreditMemo(SAPbobsCOM.Company oCompany, int docEntry, string docNum, string status)
         {
             SAPbobsCOM.Documents oInvoice = null;
 

@@ -25,38 +25,48 @@ namespace EFakturCoretax.Helpers
         // ==================== Export XML ====================
         public static bool ExportXml(TaxInvoiceBulk invoice)
         {
-            if (invoice == null) throw new ArgumentNullException(nameof(invoice));
-
-            string filePath = GetSaveFilePath("XML Files (*.xml)|*.xml", "TaxInvoice.xml");
-            if (string.IsNullOrEmpty(filePath)) return false;
-
-            XmlSerializer serializer = new XmlSerializer(typeof(TaxInvoiceBulk));
-            using (var writer = new StreamWriter(filePath))
+            try
             {
-                serializer.Serialize(writer, invoice);
+                if (invoice == null) throw new ArgumentNullException(nameof(invoice));
+                
+                string filePath = GetSaveFilePath("XML Files (*.xml)|*.xml", "TaxInvoice.xml");
+                if (string.IsNullOrEmpty(filePath)) return false;
+
+                XmlSerializer serializer = new XmlSerializer(typeof(TaxInvoiceBulk));
+                using (var writer = new StreamWriter(filePath))
+                {
+                    serializer.Serialize(writer, invoice);
+                }
+                return true;
             }
-            return true;
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
 
         // ==================== Export CSV ====================
         public static bool ExportCsv(TaxInvoiceBulk invoice)
         {
-            if (invoice == null) throw new ArgumentNullException(nameof(invoice));
-
-            string filePath = GetSaveFilePath("CSV Files (*.csv)|*.csv", "TaxInvoice.csv");
-            if (string.IsNullOrEmpty(filePath)) return false;
-
-            var sb = new StringBuilder();
-
-            // CSV Header
-            sb.AppendLine("TaxInvoiceDate,TaxInvoiceOpt,TrxCode,AddInfo,CustomDoc,CustomDocMonthYear,RefDesc,FacilityStamp,SellerIDTKU,BuyerTin,BuyerDocument,BuyerCountry,BuyerDocumentNumber,BuyerName,BuyerAdress,BuyerEmail,BuyerIDTKU,GoodServiceOpt,GoodServiceCode,GoodServiceName,Unit,Price,Qty,TotalDiscount,TaxBase,OtherTaxBase,VATRate,VAT,STLGRate,STLG");
-
-            foreach (var taxInvoice in invoice.ListOfTaxInvoice.TaxInvoiceCollection)
+            try
             {
-                foreach (var gs in taxInvoice.ListOfGoodService.GoodServiceCollection)
+                if (invoice == null) throw new ArgumentNullException(nameof(invoice));
+
+                string filePath = GetSaveFilePath("CSV Files (*.csv)|*.csv", "TaxInvoice.csv");
+                if (string.IsNullOrEmpty(filePath)) return false;
+
+                var sb = new StringBuilder();
+
+                // CSV Header
+                sb.AppendLine("TaxInvoiceDate,TaxInvoiceOpt,TrxCode,AddInfo,CustomDoc,CustomDocMonthYear,RefDesc,FacilityStamp,SellerIDTKU,BuyerTin,BuyerDocument,BuyerCountry,BuyerDocumentNumber,BuyerName,BuyerAdress,BuyerEmail,BuyerIDTKU,GoodServiceOpt,GoodServiceCode,GoodServiceName,Unit,Price,Qty,TotalDiscount,TaxBase,OtherTaxBase,VATRate,VAT,STLGRate,STLG");
+
+                foreach (var taxInvoice in invoice.ListOfTaxInvoice.TaxInvoiceCollection)
                 {
-                    sb.AppendLine(string.Join(",", new[]
+                    foreach (var gs in taxInvoice.ListOfGoodService.GoodServiceCollection)
                     {
+                        sb.AppendLine(string.Join(",", new[]
+                        {
                 CsvEscape(taxInvoice.TaxInvoiceDate),
                 CsvEscape(taxInvoice.TaxInvoiceOpt),
                 CsvEscape(taxInvoice.TrxCode),
@@ -88,12 +98,18 @@ namespace EFakturCoretax.Helpers
                 gs.STLGRate.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 gs.STLG.ToString(System.Globalization.CultureInfo.InvariantCulture)
             }));
+                    }
                 }
-            }
 
-            // Write with UTF-8 BOM for Excel compatibility
-            File.WriteAllText(filePath, sb.ToString(), new UTF8Encoding(true));
-            return true;
+                // Write with UTF-8 BOM for Excel compatibility
+                File.WriteAllText(filePath, sb.ToString(), new UTF8Encoding(true));
+                return true;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
 
         /// <summary>
@@ -113,45 +129,53 @@ namespace EFakturCoretax.Helpers
         // ==================== Helper: SaveFileDialog in STA thread ====================
         public static string GetSaveFilePath(string filter, string defaultFileName)
         {
-            string filePath = null;
-
-            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            string fileNameWithTimestamp =
-                Path.GetFileNameWithoutExtension(defaultFileName) + "_" +
-                timestamp +
-                Path.GetExtension(defaultFileName);
-
-            var t = new Thread(() =>
+            try
             {
-                string initialDir = Directory.Exists(_lastDirectory)
-                ? _lastDirectory
-                : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                using (var saveDialog = new SaveFileDialog
-                {
-                    Filter = filter,
-                    Title = "Save File",
-                    FileName = fileNameWithTimestamp,
-                    RestoreDirectory = true,
-                    CheckPathExists = true,
-                    InitialDirectory = initialDir
-                })
-                {
-                    var owner = new WindowWrapper(GetForegroundWindow());
+                string filePath = null;
 
-                    if (saveDialog.ShowDialog(owner) == DialogResult.OK)
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string fileNameWithTimestamp =
+                    Path.GetFileNameWithoutExtension(defaultFileName) + "_" +
+                    timestamp +
+                    Path.GetExtension(defaultFileName);
+
+                var t = new Thread(() =>
+                {
+                    string initialDir = Directory.Exists(_lastDirectory)
+                    ? _lastDirectory
+                    : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                    using (var saveDialog = new SaveFileDialog
                     {
-                        filePath = saveDialog.FileName;
-                        // update last directory
-                        _lastDirectory = Path.GetDirectoryName(filePath);
+                        Filter = filter,
+                        Title = "Save File",
+                        FileName = fileNameWithTimestamp,
+                        RestoreDirectory = true,
+                        CheckPathExists = true,
+                        InitialDirectory = initialDir
+                    })
+                    {
+                        var owner = new WindowWrapper(GetForegroundWindow());
+
+                        if (saveDialog.ShowDialog(owner) == DialogResult.OK)
+                        {
+                            filePath = saveDialog.FileName;
+                            // update last directory
+                            _lastDirectory = Path.GetDirectoryName(filePath);
+                        }
                     }
-                }
-            });
+                });
 
-            t.SetApartmentState(ApartmentState.STA);
-            t.Start();
-            t.Join();
+                t.SetApartmentState(ApartmentState.STA);
+                t.Start();
+                t.Join();
 
-            return filePath;
+                return filePath;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
     }
 }

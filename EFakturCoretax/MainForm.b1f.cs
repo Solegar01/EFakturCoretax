@@ -67,6 +67,7 @@ namespace EFakturCoretax
             this.ComboBox2 = ((SAPbouiCOM.ComboBox)(this.GetItem("CbToBr").Specific));
             this.ComboBox3 = ((SAPbouiCOM.ComboBox)(this.GetItem("CbToOtl").Specific));
             this.ComboBox4 = ((SAPbouiCOM.ComboBox)(this.GetItem("CbSeries").Specific));
+            this.EditText3 = ((SAPbouiCOM.EditText)(this.GetItem("DocEntry").Specific));
             this.OnCustomInitialize();
 
         }
@@ -134,5 +135,6 @@ namespace EFakturCoretax
         private SAPbouiCOM.ComboBox ComboBox2;
         private SAPbouiCOM.ComboBox ComboBox3;
         private SAPbouiCOM.ComboBox ComboBox4;
+        private SAPbouiCOM.EditText EditText3;
     }
 }
