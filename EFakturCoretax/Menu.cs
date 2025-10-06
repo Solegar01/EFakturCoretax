@@ -573,7 +573,6 @@ namespace EFakturCoretax
                         }
                         catch (Exception)
                         {
-
                             throw;
                         }
                         finally
@@ -1210,7 +1209,6 @@ namespace EFakturCoretax
             }
             catch (Exception)
             {
-
                 throw;
             }
             finally
@@ -1244,7 +1242,6 @@ namespace EFakturCoretax
             }
             catch (Exception)
             {
-
                 throw;
             }
         }
@@ -1306,7 +1303,6 @@ namespace EFakturCoretax
             }
             catch (Exception)
             {
-
                 throw;
             }
         }
@@ -1398,7 +1394,6 @@ namespace EFakturCoretax
             }
             catch (Exception)
             {
-
                 throw;
             }
         }
@@ -1519,7 +1514,6 @@ namespace EFakturCoretax
             }
             catch (Exception)
             {
-
                 throw;
             }
             finally
@@ -1553,7 +1547,6 @@ namespace EFakturCoretax
             }
             catch (Exception)
             {
-
                 throw;
             }
         }
@@ -1619,7 +1612,6 @@ namespace EFakturCoretax
             }
             catch (Exception)
             {
-
                 throw;
             }
             finally
@@ -2395,7 +2387,6 @@ namespace EFakturCoretax
                 }
                 catch (Exception)
                 {
-
                     throw;
                 }
                 finally
