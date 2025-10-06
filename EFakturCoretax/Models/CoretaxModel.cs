@@ -71,15 +71,17 @@ namespace EFakturCoretax.Models
         public string DefItemCode { get; set; }
         public string ItemName { get; set; }
         public string ItemUnit { get; set; }
-        public double ItemPrice { get; set; }
-        public double Qty { get; set; }
-        public double TotalDisc { get; set; }
-        public double TaxBase { get; set; }
-        public double OtherTaxBase { get; set; }
-        public double VATRate { get; set; }
-        public double AmountVAT { get; set; }
-        public double STLGRate { get; set; }
-        public double STLG { get; set; }
+        public decimal ItemPrice { get; set; }
+        public decimal Qty { get; set; }
+        public decimal TotalDisc { get; set; }
+        public decimal TaxBase { get; set; }
+        public decimal OtherTaxBase { get; set; }
+        public decimal VATRate { get; set; }
+        public decimal AmountVAT { get; set; }
+        public decimal STLGRate { get; set; }
+        public decimal STLG { get; set; }
+        public decimal CoretaxVatAmount { get; set; }
+        public decimal CoretaxVatRate { get; set; }
         public string JenisPajak { get; set; }
         public string KetTambahan { get; set; }
         public string PajakPengganti { get; set; }
@@ -93,5 +95,6 @@ namespace EFakturCoretax.Models
         public string BuyerEmail { get; set; }
         public string OutletCode { get; set; }
         public string OutletName { get; set; }
+        public string Revise { get; set; }
     }
 }

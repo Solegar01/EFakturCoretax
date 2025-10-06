@@ -2,6 +2,7 @@
 using SAPbouiCOM.Framework;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -534,15 +535,17 @@ namespace EFakturCoretax.Helpers
                     ItemUnit = oDBDS_Detail.GetValue("U_T2_Item_Unit", i)?.Trim(),
 
                     // --- decimals (safe conversion) ---
-                    ItemPrice = SafeToDouble(oDBDS_Detail.GetValue("U_T2_Item_Price", i)),
-                    Qty = SafeToDouble(oDBDS_Detail.GetValue("U_T2_Qty", i)),
-                    TotalDisc = SafeToDouble(oDBDS_Detail.GetValue("U_T2_Total_Disc", i)),
-                    TaxBase = SafeToDouble(oDBDS_Detail.GetValue("U_T2_Tax_Base", i)),
-                    OtherTaxBase = SafeToDouble(oDBDS_Detail.GetValue("U_T2_Other_Tax_Base", i)),
-                    VATRate = SafeToDouble(oDBDS_Detail.GetValue("U_T2_VAT_Rate", i)),
-                    AmountVAT = SafeToDouble(oDBDS_Detail.GetValue("U_T2_Amount_VAT", i)),
-                    STLGRate = SafeToDouble(oDBDS_Detail.GetValue("U_T2_STLG_Rate", i)),
-                    STLG = SafeToDouble(oDBDS_Detail.GetValue("U_T2_STLG", i)),
+                    ItemPrice = Math.Round(Convert.ToDecimal(oDBDS_Detail.GetValue("U_T2_Item_Price", i), CultureInfo.InvariantCulture),2),
+                    Qty = Math.Round(Convert.ToDecimal(oDBDS_Detail.GetValue("U_T2_Qty", i), CultureInfo.InvariantCulture),2),
+                    TotalDisc = Math.Round(Convert.ToDecimal(oDBDS_Detail.GetValue("U_T2_Total_Disc", i), CultureInfo.InvariantCulture), 2),
+                    TaxBase = Math.Round(Convert.ToDecimal(oDBDS_Detail.GetValue("U_T2_Tax_Base", i), CultureInfo.InvariantCulture), 2),
+                    OtherTaxBase = Math.Round(Convert.ToDecimal(oDBDS_Detail.GetValue("U_T2_Other_Tax_Base", i), CultureInfo.InvariantCulture), 2),
+                    VATRate = Math.Round(Convert.ToDecimal(oDBDS_Detail.GetValue("U_T2_VAT_Rate", i), CultureInfo.InvariantCulture),2),
+                    AmountVAT = Math.Round(Convert.ToDecimal(oDBDS_Detail.GetValue("U_T2_Amount_VAT", i), CultureInfo.InvariantCulture),2),
+                    STLGRate = Math.Round(Convert.ToDecimal(oDBDS_Detail.GetValue("U_T2_STLG_Rate", i), CultureInfo.InvariantCulture), 2),
+                    STLG = Math.Round(Convert.ToDecimal(oDBDS_Detail.GetValue("U_T2_STLG", i), CultureInfo.InvariantCulture), 2),
+                    CoretaxVatRate = Math.Round(Convert.ToDecimal(oDBDS_Detail.GetValue("U_T2_Coretax_Vat_Rate", i), CultureInfo.InvariantCulture), 2), 
+                    CoretaxVatAmount = Math.Round(Convert.ToDecimal(oDBDS_Detail.GetValue("U_T2_Coretax_Vat_Amount", i), CultureInfo.InvariantCulture), 2),
 
                     // --- strings ---
                     JenisPajak = oDBDS_Detail.GetValue("U_T2_Jenis_Pajak", i)?.Trim(),
@@ -558,6 +561,7 @@ namespace EFakturCoretax.Helpers
                     AddInfo = oDBDS_Detail.GetValue("U_T2_Add_Info", i)?.Trim(),
                     BuyerCountry = oDBDS_Detail.GetValue("U_T2_Buyer_Country", i)?.Trim(),
                     BuyerEmail = oDBDS_Detail.GetValue("U_T2_Buyer_Email", i)?.Trim(),
+                    Revise = oDBDS_Detail.GetValue("U_T2_Revise", i)?.Trim(),
                 };
 
                 listData.Add(detail);
@@ -566,10 +570,6 @@ namespace EFakturCoretax.Helpers
             return listData;
         }
 
-        private static double SafeToDouble(string val)
-        {
-            return double.TryParse(val?.Trim(), out var result) ? result : 0;
-        }
 
         public static List<TaxInvoice> BuildTaxInvoiceList(List<InvoiceDataModel> invoiceDatas)
         {
@@ -654,14 +654,14 @@ namespace EFakturCoretax.Helpers
 
         public static void StartLoading(SAPbouiCOM.Form oForm, string pbText, int max, bool stopable)
         {
-            if (_pb != null) { _pb.Stop(); System.Runtime.InteropServices.Marshal.ReleaseComObject(_pb); _pb = null; }
+            if (_pb != null) { _pb.Stop(); _pb = null; }
             _pb = Application.SBO_Application.StatusBar.CreateProgressBar(pbText, max, stopable);
             oForm.Freeze(true);
         }
 
         public static void FinishLoading(SAPbouiCOM.Form oForm)
         {
-            if (_pb != null) { _pb.Stop(); System.Runtime.InteropServices.Marshal.ReleaseComObject(_pb); _pb = null; }
+            if (_pb != null) { _pb.Stop(); _pb = null; }
             oForm.Freeze(false);
         }
 

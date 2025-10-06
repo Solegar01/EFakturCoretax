@@ -20,5 +20,6 @@ namespace EFakturCoretax.Models
         public string OutletCode { get; set; }
         public string OutletName { get; set; }
         public bool Selected { get; set; } = true;
+        public bool Revise { get; set; } = true;
     }
 }

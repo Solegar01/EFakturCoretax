@@ -71,6 +71,9 @@ namespace EFakturCoretax
             this.EditText4 = ((SAPbouiCOM.EditText)(this.GetItem("TFromDt").Specific));
             this.EditText8 = ((SAPbouiCOM.EditText)(this.GetItem("TToDt").Specific));
             this.Button4 = ((SAPbouiCOM.Button)(this.GetItem("1").Specific));
+            this.Button7 = ((SAPbouiCOM.Button)(this.GetItem("BtRev").Specific));
+            this.StaticText22 = ((SAPbouiCOM.StaticText)(this.GetItem("LVatRate").Specific));
+            this.EditText10 = ((SAPbouiCOM.EditText)(this.GetItem("TVatRate").Specific));
             this.OnCustomInitialize();
 
         }
@@ -142,5 +145,11 @@ namespace EFakturCoretax
         private SAPbouiCOM.EditText EditText4;
         private SAPbouiCOM.EditText EditText8;
         private SAPbouiCOM.Button Button4;
+        private SAPbouiCOM.Button Button7;
+        private SAPbouiCOM.EditText EditText9;
+        private SAPbouiCOM.StaticText StaticText20;
+        private SAPbouiCOM.StaticText StaticText21;
+        private SAPbouiCOM.StaticText StaticText22;
+        private SAPbouiCOM.EditText EditText10;
     }
 }

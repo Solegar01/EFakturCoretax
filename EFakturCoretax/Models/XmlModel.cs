@@ -53,13 +53,13 @@ public class GoodService
     public string Code { get; set; }
     public string Name { get; set; }
     public string Unit { get; set; }
-    public double Price { get; set; }
-    public double Qty { get; set; }
-    public double TotalDiscount { get; set; }
-    public double TaxBase { get; set; }
-    public double OtherTaxBase { get; set; }
-    public double VATRate { get; set; }
-    public double VAT { get; set; }
-    public double STLGRate { get; set; }
-    public double STLG { get; set; }
+    public decimal Price { get; set; }
+    public decimal Qty { get; set; }
+    public decimal TotalDiscount { get; set; }
+    public decimal TaxBase { get; set; }
+    public decimal OtherTaxBase { get; set; }
+    public decimal VATRate { get; set; }
+    public decimal VAT { get; set; }
+    public decimal STLGRate { get; set; }
+    public decimal STLG { get; set; }
 }

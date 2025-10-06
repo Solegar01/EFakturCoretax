@@ -44,6 +44,9 @@ namespace EFakturCoretax
         string oldToOutlet = string.Empty;
         string strDocEntry = string.Empty;
 
+        decimal oldVatRate = 0;
+        private List<FilterDataModel> SelectedReviseDoc = new List<FilterDataModel>();
+
         public void AddMenuItems()
         {
             SAPbouiCOM.Menus oMenus = null;
@@ -130,21 +133,6 @@ namespace EFakturCoretax
                         {
                             oForm.Items.Item("U_T2_Exported").Enabled = false;
                             oForm.Items.Item("U_T2_Coretax_No").Enabled = false;
-                            var ckRevise = (SAPbouiCOM.CheckBox)oForm.Items.Item("U_T2_Revise_Coretax").Specific;
-                            oForm.Items.Item("U_T2_Revise_Coretax").Enabled = true;
-                            if (ckRevise.Checked)
-                            {
-                                oForm.Items.Item("U_T2_Revise_Coretax").Enabled = false;
-                            }
-                            else
-                            {
-                                var ckExp = (SAPbouiCOM.CheckBox)oForm.Items.Item("U_T2_Exported").Specific;
-                                var txtCoretax = (SAPbouiCOM.EditText)oForm.Items.Item("U_T2_Coretax_No").Specific;
-                                if (!ckExp.Checked && string.IsNullOrEmpty(txtCoretax.Value))
-                                {
-                                    oForm.Items.Item("U_T2_Revise_Coretax").Enabled = false;
-                                }
-                            }
                         }
                     }
                     catch (Exception e)
@@ -196,7 +184,8 @@ namespace EFakturCoretax
                                                             p.BranchCode,
                                                             p.BranchName,
                                                             p.OutletCode,
-                                                            p.OutletName
+                                                            p.OutletName,
+                                                            p.Revise
                                                         })
                                                         .Select(g => new FilterDataModel
                                                         {
@@ -211,7 +200,8 @@ namespace EFakturCoretax
                                                             BranchName = g.Key.BranchName,
                                                             OutletCode = g.Key.OutletCode,
                                                             OutletName = g.Key.OutletName,
-                                                            Selected = true
+                                                            Selected = true,
+                                                            Revise = g.Key.Revise == "Y"
                                                         })
                                                         .ToList();
 
@@ -248,7 +238,10 @@ namespace EFakturCoretax
                                             FormHelper.SetEnabled(oForm, new[] { "TFromDt", "TToDt", "TFromDoc", "TToDoc", "TFromCust", "TToCust", "CbFromBr", "CbToBr", "CbFromOtl", "CbToOtl" }, false);
                                         }
 
+                                        SetReviseMode(oForm);
+
                                         oForm.Items.Item("TPostDate").Enabled = status == "O";
+                                        oForm.Items.Item("TVatRate").Enabled = status == "O";
                                         oForm.Items.Item("BtCSV").Enabled = true;
                                         oForm.Items.Item("BtXML").Enabled = true;
                                         if (FormHelper.ItemIsExists(oForm, "BtCbAdd"))
@@ -360,6 +353,7 @@ namespace EFakturCoretax
                                 GetDataSeriesComboBox(oForm);
                                 oForm.Items.Item("TDocNum").Enabled = true;
                                 oForm.Items.Item("TPostDate").Enabled = true;
+                                oForm.Items.Item("TVatRate").Enabled = true;
 
                                 var statusItem = oForm.Items.Item("TStatus");
                                 statusItem.Visible = false;
@@ -436,7 +430,8 @@ namespace EFakturCoretax
                             try
                             {
                                 FormHelper.StartLoading(oForm, "Loading...", 0, false);
-
+                                SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
+                                string status = oDBDS_Header.GetValue("Status", 0)?.Trim();
                                 FormHelper.RemoveFocus(oForm);
                                 oForm.Items.Item("TDocNum").Enabled = false;
                                 oForm.Items.Item("TStatus").Visible = true;
@@ -452,6 +447,8 @@ namespace EFakturCoretax
                                 }
 
                                 FormHelper.SetVisible(oForm, new[] { "CkAllDt", "CkAllDoc", "CkAllCust", "CkAllBr", "CkAllOtl" }, true);
+
+                                SetReviseMode(oForm);
                             }
                             catch (Exception)
                             {
@@ -476,559 +473,601 @@ namespace EFakturCoretax
         {
             BubbleEvent = true;
             var udfFormIds = new[] { "-133", "-65300", "-179" };
-
-            if (udfFormIds.Contains(pVal.FormTypeEx))
+            try
             {
-                if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_FORM_LOAD
-                && !pVal.BeforeAction) // After form loaded
+                if (udfFormIds.Contains(pVal.FormTypeEx))
                 {
-                    SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(FormUID);
-                    oForm.Items.Item("U_T2_Exported").Enabled = false;
-                    oForm.Items.Item("U_T2_Coretax_No").Enabled = false;
-                    oForm.Items.Item("U_T2_Revise_Coretax").Enabled = false;
-                }
-
-                if (pVal.ItemUID == "U_T2_Revise_Coretax"
-                    && pVal.EventType == SAPbouiCOM.BoEventTypes.et_ITEM_PRESSED
-                    && pVal.BeforeAction)
-                {
-                    SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
-                    var ckRevise = (SAPbouiCOM.CheckBox)oForm.Items.Item("U_T2_Revise_Coretax").Specific;
-                    var ckExp = (SAPbouiCOM.CheckBox)oForm.Items.Item("U_T2_Exported").Specific;
-                    var txtCoretax = (SAPbouiCOM.EditText)oForm.Items.Item("U_T2_Coretax_No").Specific;
-                    if (ckRevise.Checked) // sudah checked → jangan boleh uncheck
+                    if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_FORM_LOAD
+                    && !pVal.BeforeAction) // After form loaded
                     {
-                        ckExp.Checked = false;
-                        txtCoretax.Value = "";
-                        FormHelper.RemoveFocus(oForm);
-                        oForm.Items.Item("U_T2_Revise_Coretax").Enabled = false;
+                        SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(FormUID);
                         oForm.Items.Item("U_T2_Exported").Enabled = false;
                         oForm.Items.Item("U_T2_Coretax_No").Enabled = false;
                     }
                 }
-            }
 
-            if (pVal.FormTypeEx == "EFakturCoretax.MainForm")
-            {
-                if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_FORM_CLOSE && pVal.BeforeAction == false)
+                if (pVal.FormTypeEx == "EFakturCoretax.MainForm")
                 {
-                    SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
-                    try
+                    if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_FORM_CLOSE && pVal.BeforeAction == false)
                     {
-
-                        FormHelper.StartLoading(oForm,"Loading...", 0, false);
-
-                        foreach (var key in SelectedCkBox.Keys.ToList())
+                        SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
+                        try
                         {
-                            SelectedCkBox[key] = false;
+
+                            FormHelper.StartLoading(oForm, "Loading...", 0, false);
+
+                            foreach (var key in SelectedCkBox.Keys.ToList())
+                            {
+                                SelectedCkBox[key] = false;
+                            }
+                            FindListModel.Clear();
+                            cbBranchValues = new Dictionary<string, string>();
+                            cbOutletValues = new Dictionary<string, string>();
+                            oldFromDt = null;
+                            oldToDt = null;
+                            oldFromDocEntry = 0;
+                            oldToDocEntry = 0;
+                            oldFromCust = string.Empty;
+                            oldToCust = string.Empty;
+                            oldFromBranch = string.Empty;
+                            oldToBranch = string.Empty;
+                            oldFromOutlet = string.Empty;
+                            oldToOutlet = string.Empty;
+                            oldVatRate = 0m;
                         }
-                        FindListModel.Clear();
-                        cbBranchValues = new Dictionary<string, string>();
-                        cbOutletValues = new Dictionary<string, string>();
-                        oldFromDt = null;
-                        oldToDt = null;
-                        oldFromDocEntry = 0;
-                        oldToDocEntry = 0;
-                        oldFromCust = string.Empty;
-                        oldToCust = string.Empty;
-                        oldFromBranch = string.Empty;
-                        oldToBranch = string.Empty;
-                        oldFromOutlet = string.Empty;
-                        oldToOutlet = string.Empty;
-                    }
-                    catch (Exception)
-                    {
-
-                        throw;
-                    }
-                    finally
-                    {
-                        FormHelper.FinishLoading(oForm);
-                    }
-                }
-
-                if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_KEY_DOWN && !pVal.BeforeAction)
-                {
-                    // Check if ENTER key pressed
-                    if (pVal.CharPressed == 13) // 13 = ENTER key
-                    {
-                        SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(FormUID);
-
-                        var oButton = (SAPbouiCOM.Button)oForm.Items.Item("1").Specific;
-                        oButton.Item.Click(SAPbouiCOM.BoCellClickType.ct_Regular);
-                    }
-                }
-
-                if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_FORM_VISIBLE &&
-                pVal.BeforeAction == false)
-                {
-                    SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
-                    //SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(FormUID);
-                    try
-                    {
-                        FormHelper.StartLoading(oForm, "Loading...", 0, false);
-                        
-                        SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
-                        string docEntry = oDBDS_Header.GetValue("DocEntry", 0).Trim();
-
-                        if (oForm.Items.Count > 0)
+                        catch (Exception)
                         {
-                            oForm.Items.Item("LDisp").TextStyle = (int)(SAPbouiCOM.BoFontStyle.fs_Bold | SAPbouiCOM.BoFontStyle.fs_Underline);
-                            oForm.Items.Item("LRange").TextStyle = (int)(SAPbouiCOM.BoFontStyle.fs_Bold | SAPbouiCOM.BoFontStyle.fs_Underline);
-                            if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_ADD_MODE)
-                            {
-                                NewForm(oForm);
-                            }
-                            else
-                            {
-                                GetDataSeriesComboBox(oForm);
-                                oForm.Items.Item("CbSeries").Enabled = false;
 
-                                string docNum = oDBDS_Header.GetValue("DocNum", 0)?.Trim();
-                                string status = oDBDS_Header.GetValue("Status", 0)?.Trim();
-                                ((SAPbouiCOM.EditText)oForm.Items.Item("TDocNum").Specific).Value = docNum;
-                                ((SAPbouiCOM.EditText)oForm.Items.Item("TStatus").Specific).Value = status == "O" ? "Open" : "Closed";
-                            }
+                            throw;
+                        }
+                        finally
+                        {
+                            FormHelper.FinishLoading(oForm);
                         }
                     }
-                    catch (Exception)
-                    {
 
-                        throw;
-                    }
-                    finally
+                    if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_KEY_DOWN && !pVal.BeforeAction)
                     {
-                        FormHelper.FinishLoading(oForm);
-                    }
-                }
+                        // Check if ENTER key pressed
+                        if (pVal.CharPressed == 13) // 13 = ENTER key
+                        {
+                            SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(FormUID);
 
-                if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_ITEM_PRESSED)
-                {
-                    if (pVal.BeforeAction) // before the press
-                    {
-                        if (pVal.ItemUID == "BtCbAdd")
-                        {
-                            int answer = Application.SBO_Application.MessageBox(
-                                                "Adding this document is irreversible. Do you want to continue?",
-                                                2, // two buttons
-                                                "Yes", "No"
-                                            );
-                            // MessageBox returns 1 for first button, 2 for second
-                            if (answer == 2)
-                            {
-                                BubbleEvent = false; // cancel the Add
-                                return;
-                            }
-                        }
-                        if (pVal.ItemUID == "1")
-                        {
-                            SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
-                            if (oForm.Mode != SAPbouiCOM.BoFormMode.fm_FIND_MODE && oForm.Mode != SAPbouiCOM.BoFormMode.fm_OK_MODE)
-                            {
-                                if (oForm.Items.Count > 0)
-                                {
-                                    SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
-                                    SAPbouiCOM.DBDataSource oDBDS_Detail = oForm.DataSources.DBDataSources.Item("@T2_CORETAX_DT");
-                                    if (string.IsNullOrEmpty(oDBDS_Header.GetValue("U_T2_Posting_Date", 0)?.Trim()))
-                                    {
-                                        Application.SBO_Application.StatusBar.SetText(
-                                            "Posting date is required.",
-                                            SAPbouiCOM.BoMessageTime.bmt_Short,
-                                            SAPbouiCOM.BoStatusBarMessageType.smt_Error
-                                        );
-                                        if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_ADD_MODE)
-                                        {
-                                            oForm.Items.Item("1").Visible = false;
-                                            oForm.Items.Item("BtCbAdd").Visible = true;
-                                        }
-                                        BubbleEvent = false;
-                                        return;
-                                    }
-                                    if (oDBDS_Detail.Size <= 0)
-                                    {
-                                        Application.SBO_Application.StatusBar.SetText(
-                                            "Detail generated data is required.",
-                                            SAPbouiCOM.BoMessageTime.bmt_Short,
-                                            SAPbouiCOM.BoStatusBarMessageType.smt_Error
-                                        );
-                                        if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_ADD_MODE)
-                                        {
-                                            oForm.Items.Item("1").Visible = false;
-                                            oForm.Items.Item("BtCbAdd").Visible = true;
-                                        }
-                                        BubbleEvent = false;
-                                        return;
-                                    }
-                                }
-                            }
+                            var oButton = (SAPbouiCOM.Button)oForm.Items.Item("1").Specific;
+                            oButton.Item.Click(SAPbouiCOM.BoCellClickType.ct_Regular);
                         }
                     }
-                    else if (!pVal.BeforeAction)
+
+                    if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_FORM_VISIBLE &&
+                    pVal.BeforeAction == false)
                     {
-                        //Check Box
-                        if (new[] { "CkInv", "CkDp", "CkCm" }.Contains(pVal.ItemUID))
+                        SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
+                        //SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(FormUID);
+                        try
                         {
-                            DocCheckBoxHandler(pVal, FormUID);
-                        }
+                            FormHelper.StartLoading(oForm, "Loading...", 0, false);
 
-                        if (new[] { "CkAllDt", "CkAllDoc", "CkAllCust", "CkAllBr", "CkAllOtl" }.Contains(pVal.ItemUID))
-                        {
-                            CheckAllHandler(pVal, FormUID);
-                        }
-
-                        //
-                        if (pVal.ItemUID == "BtFilter")
-                        {
-                            BtnFilterHandler(pVal, FormUID);
-                        }
-
-                        //
-                        if (pVal.ItemUID == "BtGen")
-                        {
-                            BtnGenHandler(pVal, FormUID);
-                        }
-
-                        //
-                        if (pVal.ItemUID == "BtXML")
-                        {
-                            ExportToXML(FormUID);
-                        }
-
-                        //
-                        if (pVal.ItemUID == "BtCSV")
-                        {
-                            ExportToCsv(FormUID);
-                        }
-
-                        if (pVal.ItemUID == "BtCbAdd")
-                        {
-                            SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
-                            oForm.Items.Item("1").Visible = true;
-                            oForm.Items.Item("BtCbAdd").Visible = false;
-                            oForm.Items.Item("1").Click(SAPbouiCOM.BoCellClickType.ct_Regular);
-                        }
-
-                        if (pVal.ItemUID == "1")
-                        {
-                            SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(pVal.FormUID);
-                            try
-                            {
-                                FormHelper.StartLoading(oForm, "Loading...", 0, false);
-                                if (oForm.Items.Count > 0)
-                                {
-                                    if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_ADD_MODE && pVal.ActionSuccess)
-                                    {
-                                        if (SelectedAddAction == "2")
-                                        {
-                                            NewForm(oForm);
-                                            oForm.Items.Item("BtCbAdd").Visible = true;
-                                        }
-                                        else
-                                        {
-                                            oForm.Items.Item("BtCbAdd").Visible = false;
-                                            RefreshCurrentForm(oForm, strDocEntry);
-                                        }
-                                    }
-                                    else if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_OK_MODE)
-                                    {
-                                        oForm.Items.Item("BtCSV").Enabled = true;
-                                        oForm.Items.Item("BtXML").Enabled = true;
-                                    }
-                                }
-                            }
-                            catch (Exception)
-                            {
-
-                                throw;
-                            }
-                            finally
-                            {
-                                FormHelper.FinishLoading(oForm);
-                            }
-                        }
-                    }
-                }
-
-                if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_VALIDATE)
-                {
-                    SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
-                    SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
-                    if (pVal.BeforeAction)
-                    {
-                        if (pVal.ItemUID == "TFromDt")
-                        {
-                            string strDate = oDBDS_Header.GetValue("U_T2_From_Date", 0).Trim();
-                            if (DateTime.TryParseExact(strDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate)) oldFromDt = parsedDate;
-                        }
-                        if (pVal.ItemUID == "TToDt")
-                        {
-                            string strDate = oDBDS_Header.GetValue("U_T2_To_Date", 0).Trim();
-                            if (DateTime.TryParseExact(strDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate)) oldToDt = parsedDate;
-                        }
-                        if (pVal.ItemUID == "TFromDoc")
-                        {
-                            string strDocEntry = oDBDS_Header.GetValue("U_T2_From_Doc_Entry", 0).Trim();
-                            if (int.TryParse(strDocEntry, out int parsedVal)) oldFromDocEntry = parsedVal;
-                        }
-                        if (pVal.ItemUID == "TToDoc")
-                        {
-                            string strDocEntry = oDBDS_Header.GetValue("U_T2_To_Doc_Entry", 0).Trim();
-                            if (int.TryParse(strDocEntry, out int parsedVal)) oldToDocEntry = parsedVal;
-                        }
-                        if (pVal.ItemUID == "TFromCust")
-                        {
-                            oldFromCust = oDBDS_Header.GetValue("U_T2_From_Cust", 0).Trim();
-                        }
-                        if (pVal.ItemUID == "TToCust")
-                        {
-                            oldToCust = oDBDS_Header.GetValue("U_T2_To_Cust", 0).Trim();
-                        }
-                    }
-                    else if (!pVal.BeforeAction)
-                    {
-                        if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_OK_MODE)
-                        {
-                            FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, true);
-                        }
-                        else
-                        {
-                            FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, false);
-                        }
-
-                        if (pVal.ItemUID == "TFromDt" || pVal.ItemUID == "TToDt")
-                        {
-                            string strFromDate = oDBDS_Header.GetValue("U_T2_From_Date", 0).Trim();
-                            string strToDate = oDBDS_Header.GetValue("U_T2_To_Date", 0).Trim();
-                            DateTime? newFromDate = null;
-                            DateTime? newToDate = null;
-                            if (DateTime.TryParseExact(strFromDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate)) newFromDate = parsedDate;
-                            if (DateTime.TryParseExact(strToDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedToDate)) newToDate = parsedToDate;
-                            if (pVal.ItemUID == "TFromDt")
-                            {
-                                if ((oldFromDt != newFromDate))
-                                {
-                                    ResetDetail(oForm);
-                                }
-                            }
-                            else
-                            {
-                                if ((oldToDt != newToDate))
-                                {
-                                    ResetDetail(oForm);
-                                }
-                            }
-                            // Checkbox logic
-                            if (newFromDate == null && newToDate == null)
-                                FormHelper.SetValueDS(oForm, "CkDtDS", "Y");
-                            else
-                                FormHelper.SetValueDS(oForm, "CkDtDS", "N");
-                        }
-
-                        if (pVal.ItemUID == "TFromDoc" || pVal.ItemUID == "TToDoc")
-                        {
-                            string strFromEntry = oDBDS_Header.GetValue("U_T2_From_Doc_Entry", 0).Trim();
-                            string strToEntry = oDBDS_Header.GetValue("U_T2_To_Doc_Entry", 0).Trim();
-                            int newFromEntry = 0;
-                            int newToEntry = 0;
-                            if (int.TryParse(strFromEntry, out int parsedFromEntry)) newFromEntry = parsedFromEntry;
-                            if (int.TryParse(strToEntry, out int parsedToEntry)) newToEntry = parsedToEntry;
-                            if (pVal.ItemUID == "TFromDoc")
-                            {
-                                if ((oldFromDocEntry != newFromEntry))
-                                {
-                                    ResetDetail(oForm);
-                                }
-                            }
-                            else
-                            {
-                                if ((oldToDocEntry != newToEntry))
-                                {
-                                    ResetDetail(oForm);
-                                }
-                            }
-
-                            // Checkbox logic
-                            if (newFromEntry == 0 && newToEntry == 0)
-                                FormHelper.SetValueDS(oForm, "CkDocDS", "Y");
-                            else
-                                FormHelper.SetValueDS(oForm, "CkDocDS", "N");
-                        }
-
-                        if (pVal.ItemUID == "TFromCust" || pVal.ItemUID == "TToCust")
-                        {
-                            string newFromCust = oDBDS_Header.GetValue("U_T2_From_Cust", 0).Trim();
-                            string newToCust = oDBDS_Header.GetValue("U_T2_To_Cust", 0).Trim();
-                            if (pVal.ItemUID == "TFromCust")
-                            {
-                                if ((oldFromCust != newFromCust))
-                                {
-                                    ResetDetail(oForm);
-                                }
-                            }
-                            else
-                            {
-                                if ((oldToCust != newToCust))
-                                {
-                                    ResetDetail(oForm);
-                                }
-                            }
-
-                            // Checkbox logic
-                            if (string.IsNullOrEmpty(newFromCust) && string.IsNullOrEmpty(newToCust))
-                                FormHelper.SetValueDS(oForm, "CkCustDS", "Y");
-                            else
-                                FormHelper.SetValueDS(oForm, "CkCustDS", "N");
-                        }
-                    }
-                }
-
-                if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_CLICK && !pVal.BeforeAction)
-                {
-                    SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
-                    try
-                    {
-                        FormHelper.StartLoading(oForm, "Loading...", 0, false);
-                        if (oForm.Items.Count > 0)
-                        {
-                            if (pVal.ItemUID == "MtFind" && pVal.EventType == SAPbouiCOM.BoEventTypes.et_CLICK && pVal.BeforeAction == false && pVal.ColUID == "Col_10")
-                            {
-                                SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
-                                var status = oDBDS_Header.GetValue("Status", 0).Trim();
-                                if (status != "O") return;
-                                SelectFilterHandler(FormUID, pVal.Row);
-                            }
-                        }
-                    }
-                    catch (Exception)
-                    {
-
-                        throw;
-                    }
-                    finally
-                    {
-                        FormHelper.FinishLoading(oForm);
-                    }
-                }
-
-                if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_COMBO_SELECT)
-                {
-                    SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
-                    try
-                    {
-                        FormHelper.StartLoading(oForm, "Loading", 0, false);
-                        if (new[] { "CbFromBr", "CbToBr", "CbFromOtl", "CbToOtl" }.Contains(pVal.ItemUID))
-                        {
                             SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
-                            if (pVal.BeforeAction)
+                            string docEntry = oDBDS_Header.GetValue("DocEntry", 0).Trim();
+
+                            if (oForm.Items.Count > 0)
                             {
-                                if (pVal.ItemUID == "CbFromBr")
+                                oForm.Items.Item("LDisp").TextStyle = (int)(SAPbouiCOM.BoFontStyle.fs_Bold | SAPbouiCOM.BoFontStyle.fs_Underline);
+                                oForm.Items.Item("LRange").TextStyle = (int)(SAPbouiCOM.BoFontStyle.fs_Bold | SAPbouiCOM.BoFontStyle.fs_Underline);
+                                if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_ADD_MODE)
                                 {
-                                    oldFromBranch = oDBDS_Header.GetValue("U_T2_From_Branch", 0).Trim();
+                                    NewForm(oForm);
                                 }
-                                if (pVal.ItemUID == "CbToBr")
+                                else
                                 {
-                                    oldToBranch = oDBDS_Header.GetValue("U_T2_To_Branch", 0).Trim();
+                                    GetDataSeriesComboBox(oForm);
+                                    oForm.Items.Item("CbSeries").Enabled = false;
+
+                                    string docNum = oDBDS_Header.GetValue("DocNum", 0)?.Trim();
+                                    string status = oDBDS_Header.GetValue("Status", 0)?.Trim();
+                                    ((SAPbouiCOM.EditText)oForm.Items.Item("TDocNum").Specific).Value = docNum;
+                                    ((SAPbouiCOM.EditText)oForm.Items.Item("TStatus").Specific).Value = status == "O" ? "Open" : "Closed";
+                                    SetReviseMode(oForm);
                                 }
-                                if (pVal.ItemUID == "CbFromOtl")
+                            }
+                        }
+                        catch (Exception)
+                        {
+
+                            throw;
+                        }
+                        finally
+                        {
+                            FormHelper.FinishLoading(oForm);
+                        }
+                    }
+
+                    if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_ITEM_PRESSED)
+                    {
+                        SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
+                        try
+                        {
+                            if (pVal.BeforeAction) // before the press
+                            {
+                                if (pVal.ItemUID == "BtCbAdd")
                                 {
-                                    oldFromOutlet = oDBDS_Header.GetValue("U_T2_From_Outlet", 0).Trim();
+                                    int answer = Application.SBO_Application.MessageBox(
+                                                        "Adding this document is irreversible. Do you want to continue?",
+                                                        2, // two buttons
+                                                        "Yes", "No"
+                                                    );
+                                    // MessageBox returns 1 for first button, 2 for second
+                                    if (answer == 2)
+                                    {
+                                        BubbleEvent = false; // cancel the Add
+                                        return;
+                                    }
                                 }
-                                if (pVal.ItemUID == "CbToOtl")
+                                if (pVal.ItemUID == "1")
                                 {
-                                    oldFromOutlet = oDBDS_Header.GetValue("U_T2_To_Outlet", 0).Trim();
+                                    if (oForm.Mode != SAPbouiCOM.BoFormMode.fm_FIND_MODE && oForm.Mode != SAPbouiCOM.BoFormMode.fm_OK_MODE)
+                                    {
+                                        if (oForm.Items.Count > 0)
+                                        {
+                                            SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
+                                            SAPbouiCOM.DBDataSource oDBDS_Detail = oForm.DataSources.DBDataSources.Item("@T2_CORETAX_DT");
+                                            if (string.IsNullOrEmpty(oDBDS_Header.GetValue("U_T2_Posting_Date", 0)?.Trim()))
+                                            {
+                                                Application.SBO_Application.StatusBar.SetText(
+                                                    "Posting date is required.",
+                                                    SAPbouiCOM.BoMessageTime.bmt_Short,
+                                                    SAPbouiCOM.BoStatusBarMessageType.smt_Error
+                                                );
+                                                if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_ADD_MODE)
+                                                {
+                                                    oForm.Items.Item("1").Visible = false;
+                                                    oForm.Items.Item("BtCbAdd").Visible = true;
+                                                }
+                                                BubbleEvent = false;
+                                                return;
+                                            }
+                                            if (oDBDS_Detail.Size <= 0)
+                                            {
+                                                Application.SBO_Application.StatusBar.SetText(
+                                                    "Detail generated data is required.",
+                                                    SAPbouiCOM.BoMessageTime.bmt_Short,
+                                                    SAPbouiCOM.BoStatusBarMessageType.smt_Error
+                                                );
+                                                if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_ADD_MODE)
+                                                {
+                                                    oForm.Items.Item("1").Visible = false;
+                                                    oForm.Items.Item("BtCbAdd").Visible = true;
+                                                }
+                                                BubbleEvent = false;
+                                                return;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             else if (!pVal.BeforeAction)
                             {
-                                if (pVal.ItemUID == "CbFromBr" || pVal.ItemUID == "CbToBr")
+                                //Check Box
+                                if (new[] { "CkInv", "CkDp", "CkCm" }.Contains(pVal.ItemUID))
                                 {
-                                    string newFromBranch = oDBDS_Header.GetValue("U_T2_From_Branch", 0).Trim();
-                                    string newToBranch = oDBDS_Header.GetValue("U_T2_To_Branch", 0).Trim();
-                                    if ((oldFromBranch != newFromBranch) || (oldToBranch != newToBranch))
-                                    {
-                                        ResetDetail(oForm);
-                                    }
-
-                                    // Checkbox logic
-                                    if (string.IsNullOrEmpty(newFromBranch) && string.IsNullOrEmpty(newToBranch))
-                                        FormHelper.SetValueDS(oForm, "CkBrDS", "Y");
-                                    else
-                                        FormHelper.SetValueDS(oForm, "CkBrDS", "N");
+                                    DocCheckBoxHandler(pVal, FormUID);
                                 }
-                                if (pVal.ItemUID == "CbFromOtl" || pVal.ItemUID == "CbToOtl")
+
+                                if (new[] { "CkAllDt", "CkAllDoc", "CkAllCust", "CkAllBr", "CkAllOtl" }.Contains(pVal.ItemUID))
                                 {
-                                    string newFromOutlet = oDBDS_Header.GetValue("U_T2_From_Outlet", 0).Trim();
-                                    string newToOutlet = oDBDS_Header.GetValue("U_T2_To_Outlet", 0).Trim();
-                                    if ((oldFromOutlet != newFromOutlet) || (oldToOutlet != newToOutlet))
-                                    {
-                                        ResetDetail(oForm);
-                                    }
-
-                                    // Checkbox logic
-                                    if (string.IsNullOrEmpty(newFromOutlet) && string.IsNullOrEmpty(newToOutlet))
-                                        FormHelper.SetValueDS(oForm, "CkOtlDS", "Y");
-                                    else
-                                        FormHelper.SetValueDS(oForm, "CkOtlDS", "N");
+                                    CheckAllHandler(pVal, FormUID);
                                 }
+
+                                //
+                                if (pVal.ItemUID == "BtFilter")
+                                {
+                                    BtnFilterHandler(pVal, FormUID);
+                                }
+
+                                //
+                                if (pVal.ItemUID == "BtGen")
+                                {
+                                    BtnGenHandler(pVal, FormUID);
+                                }
+
+                                //
+                                if (pVal.ItemUID == "BtXML")
+                                {
+                                    ExportToXML(FormUID);
+                                }
+
+                                //
+                                if (pVal.ItemUID == "BtCSV")
+                                {
+                                    ExportToCSV(FormUID);
+                                }
+
+                                if (pVal.ItemUID == "BtCbAdd")
+                                {
+                                    oForm.Items.Item("1").Visible = true;
+                                    oForm.Items.Item("BtCbAdd").Visible = false;
+                                    oForm.Items.Item("1").Click(SAPbouiCOM.BoCellClickType.ct_Regular);
+                                }
+
+                                if (pVal.ItemUID == "1")
+                                {
+                                    try
+                                    {
+                                        FormHelper.StartLoading(oForm, "Loading...", 0, false);
+                                        if (oForm.Items.Count > 0)
+                                        {
+                                            if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_ADD_MODE && pVal.ActionSuccess)
+                                            {
+                                                if (SelectedAddAction == "2")
+                                                {
+                                                    NewForm(oForm);
+                                                    oForm.Items.Item("BtCbAdd").Visible = true;
+                                                }
+                                                else
+                                                {
+                                                    oForm.Items.Item("BtCbAdd").Visible = false;
+                                                    RefreshCurrentForm(oForm, strDocEntry);
+                                                }
+                                            }
+                                            else if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_OK_MODE)
+                                            {
+                                                if(FormHelper.ItemIsExists(oForm, "BtCSV") && FormHelper.ItemIsExists(oForm, "BtXML"))
+                                                    FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, false);
+                                            }
+                                        }
+                                    }
+                                    catch (Exception)
+                                    {
+
+                                        throw;
+                                    }
+                                    finally
+                                    {
+                                        FormHelper.FinishLoading(oForm);
+                                    }
+                                }
+
+                                //if (pVal.ItemUID == "BtRev")
+                                //{
+                                //    if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_OK_MODE)
+                                //    {
+                                        
+                                //    }
+                                //}
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+
+                            throw ex;
+                        }
+                    }
+
+                    if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_VALIDATE)
+                    {
+                        SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
+                        SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
+                        if (pVal.BeforeAction)
+                        {
+                            //if (pVal.ItemUID == "TFromDt")
+                            //{
+                            //    string strDate = oDBDS_Header.GetValue("U_T2_From_Date", 0).Trim();
+                            //    if (DateTime.TryParseExact(strDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate)) oldFromDt = parsedDate;
+                            //}
+                            //if (pVal.ItemUID == "TToDt")
+                            //{
+                            //    string strDate = oDBDS_Header.GetValue("U_T2_To_Date", 0).Trim();
+                            //    if (DateTime.TryParseExact(strDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate)) oldToDt = parsedDate;
+                            //}
+                            //if (pVal.ItemUID == "TFromDoc")
+                            //{
+                            //    string strDocEntry = oDBDS_Header.GetValue("U_T2_From_Doc_Entry", 0).Trim();
+                            //    if (int.TryParse(strDocEntry, out int parsedVal)) oldFromDocEntry = parsedVal;
+                            //}
+                            //if (pVal.ItemUID == "TToDoc")
+                            //{
+                            //    string strDocEntry = oDBDS_Header.GetValue("U_T2_To_Doc_Entry", 0).Trim();
+                            //    if (int.TryParse(strDocEntry, out int parsedVal)) oldToDocEntry = parsedVal;
+                            //}
+                            //if (pVal.ItemUID == "TFromCust")
+                            //{
+                            //    oldFromCust = oDBDS_Header.GetValue("U_T2_From_Cust", 0).Trim();
+                            //}
+                            //if (pVal.ItemUID == "TToCust")
+                            //{
+                            //    oldToCust = oDBDS_Header.GetValue("U_T2_To_Cust", 0).Trim();
+                            //}
+                        }
+                        else if (!pVal.BeforeAction)
+                        {
+                            if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_OK_MODE)
+                            {
+                                FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, true);
+                            }
+                            else
+                            {
+                                FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, false);
                             }
 
-                        }
+                            if (pVal.ItemUID == "TFromDt" || pVal.ItemUID == "TToDt")
+                            {
+                                string strFromDate = oDBDS_Header.GetValue("U_T2_From_Date", 0).Trim();
+                                string strToDate = oDBDS_Header.GetValue("U_T2_To_Date", 0).Trim();
+                                DateTime? newFromDate = null;
+                                DateTime? newToDate = null;
+                                if (DateTime.TryParseExact(strFromDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate)) newFromDate = parsedDate;
+                                if (DateTime.TryParseExact(strToDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedToDate)) newToDate = parsedToDate;
+                                if (pVal.ItemUID == "TFromDt")
+                                {
+                                    if ((oldFromDt != newFromDate))
+                                    {
+                                        ResetDetail(oForm);
+                                        oldFromDt = newFromDate;
+                                    }
+                                }
+                                else
+                                {
+                                    if ((oldToDt != newToDate))
+                                    {
+                                        ResetDetail(oForm);
+                                        oldToDt = newToDate;
+                                    }
+                                }
+                                // Checkbox logic
+                                if (newFromDate == null && newToDate == null)
+                                    FormHelper.SetValueDS(oForm, "CkDtDS", "Y");
+                                else
+                                    FormHelper.SetValueDS(oForm, "CkDtDS", "N");
+                            }
 
-                        if (pVal.ItemUID == "CbSeries" && !pVal.BeforeAction)
+                            if (pVal.ItemUID == "TFromDoc" || pVal.ItemUID == "TToDoc")
+                            {
+                                string strFromEntry = oDBDS_Header.GetValue("U_T2_From_Doc_Entry", 0).Trim();
+                                string strToEntry = oDBDS_Header.GetValue("U_T2_To_Doc_Entry", 0).Trim();
+                                int newFromEntry = 0;
+                                int newToEntry = 0;
+                                if (int.TryParse(strFromEntry, out int parsedFromEntry)) newFromEntry = parsedFromEntry;
+                                if (int.TryParse(strToEntry, out int parsedToEntry)) newToEntry = parsedToEntry;
+                                if (pVal.ItemUID == "TFromDoc")
+                                {
+                                    if ((oldFromDocEntry != newFromEntry))
+                                    {
+                                        ResetDetail(oForm);
+                                        oldFromDocEntry = newFromEntry;
+                                    }
+                                }
+                                else
+                                {
+                                    if ((oldToDocEntry != newToEntry))
+                                    {
+                                        ResetDetail(oForm);
+                                        oldToDocEntry = newToEntry;
+                                    }
+                                }
+
+                                // Checkbox logic
+                                if (newFromEntry == 0 && newToEntry == 0)
+                                    FormHelper.SetValueDS(oForm, "CkDocDS", "Y");
+                                else
+                                    FormHelper.SetValueDS(oForm, "CkDocDS", "N");
+                            }
+
+                            if (pVal.ItemUID == "TFromCust" || pVal.ItemUID == "TToCust")
+                            {
+                                string newFromCust = oDBDS_Header.GetValue("U_T2_From_Cust", 0).Trim();
+                                string newToCust = oDBDS_Header.GetValue("U_T2_To_Cust", 0).Trim();
+                                if (pVal.ItemUID == "TFromCust")
+                                {
+                                    if ((oldFromCust != newFromCust))
+                                    {
+                                        ResetDetail(oForm);
+                                        oldFromCust = newFromCust;
+                                    }
+                                }
+                                else
+                                {
+                                    if ((oldToCust != newToCust))
+                                    {
+                                        ResetDetail(oForm);
+                                        oldToCust = newToCust;
+                                    }
+                                }
+
+                                // Checkbox logic
+                                if (string.IsNullOrEmpty(newFromCust) && string.IsNullOrEmpty(newToCust))
+                                    FormHelper.SetValueDS(oForm, "CkCustDS", "Y");
+                                else
+                                    FormHelper.SetValueDS(oForm, "CkCustDS", "N");
+                            }
+
+                            if (pVal.ItemUID == "TVatRate")
+                            {
+                                decimal newVatRate = 0;
+                                if (decimal.TryParse(
+                                        oDBDS_Header.GetValue("U_T2_Coretax_Vat_Rate", 0)?.Trim(),
+                                        NumberStyles.Any,
+                                        CultureInfo.InvariantCulture,
+                                        out decimal parsedDecimal))
+                                {
+                                    newVatRate = parsedDecimal;
+                                }
+                                if (oldVatRate != newVatRate)
+                                {
+                                    SAPbouiCOM.DBDataSource oDBDS_Detail = oForm.DataSources.DBDataSources.Item("@T2_CORETAX_DT");
+                                    // Clear Detail
+                                    while (oDBDS_Detail.Size > 0)
+                                    {
+                                        oDBDS_Detail.RemoveRecord(0);
+                                    }
+                                    oDBDS_Detail.Clear();  // extra reset
+                                    FormHelper.ClearMatrix(oForm, "MtDetail", "DT_DETAIL", "@T2_CORETAX_DT");
+                                    oldVatRate = newVatRate;
+                                }
+                            }
+                        }
+                    }
+
+                    if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_CLICK && !pVal.BeforeAction)
+                    {
+                        SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
+                        try
                         {
-                            if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_ADD_MODE)
+                            FormHelper.StartLoading(oForm, "Loading...", 0, false);
+                            if (oForm.Items.Count > 0)
                             {
                                 SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
-                                int seriesId = int.Parse(oDBDS_Header.GetValue("Series", 0)?.Trim());
-                                int nextDocNum = QueryHelper.GetLastDocNum(seriesId);
-                                oDBDS_Header.SetValue("DocNum", 0, nextDocNum.ToString());
+                                var status = oDBDS_Header.GetValue("Status", 0).Trim();
+                                if (pVal.ItemUID == "MtFind" && pVal.EventType == SAPbouiCOM.BoEventTypes.et_CLICK && pVal.BeforeAction == false && pVal.ColUID == "Col_10")
+                                {
+                                    if (status != "O") return;
+                                    SelectFilterHandler(FormUID, pVal.Row);
+                                }
+                                if (pVal.ItemUID == "MtFind" && pVal.EventType == SAPbouiCOM.BoEventTypes.et_CLICK && pVal.BeforeAction == false && pVal.ColUID == "Col_11")
+                                {
+                                    if (status != "C") return;
+                                    ReviseFilterHandler(FormUID, pVal.Row);
+                                }
                             }
                         }
-
-                        if (pVal.ItemUID == "BtCbAdd" && !pVal.BeforeAction)
+                        catch (Exception)
                         {
-                            var btCb = (SAPbouiCOM.ButtonCombo)oForm.Items.Item("BtCbAdd").Specific;
-                            SelectedAddAction = btCb.Selected.Value;
+
+                            throw;
+                        }
+                        finally
+                        {
+                            FormHelper.FinishLoading(oForm);
                         }
                     }
-                    catch (Exception)
-                    {
 
-                        throw;
-                    }
-                    finally
+                    if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_COMBO_SELECT)
                     {
-                        FormHelper.FinishLoading(oForm);
-                    }
-                }
-
-                if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_FORM_RESIZE &&
-                    pVal.BeforeAction == false)
-                {
-                    SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(FormUID);
-                    try
-                    {
-                        FormHelper.StartLoading(oForm, "Loading...", 0, false);
-                        if (oForm.Items.Count > 0)
+                        SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
+                        try
                         {
-                            AdjustMatrix(oForm);
+                            FormHelper.StartLoading(oForm, "Loading", 0, false);
+                            if (new[] { "CbFromBr", "CbToBr", "CbFromOtl", "CbToOtl" }.Contains(pVal.ItemUID))
+                            {
+                                SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
+                                if (pVal.BeforeAction)
+                                {
+                                    if (pVal.ItemUID == "CbFromBr")
+                                    {
+                                        oldFromBranch = oDBDS_Header.GetValue("U_T2_From_Branch", 0).Trim();
+                                    }
+                                    if (pVal.ItemUID == "CbToBr")
+                                    {
+                                        oldToBranch = oDBDS_Header.GetValue("U_T2_To_Branch", 0).Trim();
+                                    }
+                                    if (pVal.ItemUID == "CbFromOtl")
+                                    {
+                                        oldFromOutlet = oDBDS_Header.GetValue("U_T2_From_Outlet", 0).Trim();
+                                    }
+                                    if (pVal.ItemUID == "CbToOtl")
+                                    {
+                                        oldFromOutlet = oDBDS_Header.GetValue("U_T2_To_Outlet", 0).Trim();
+                                    }
+                                }
+                                else if (!pVal.BeforeAction)
+                                {
+                                    if (pVal.ItemUID == "CbFromBr" || pVal.ItemUID == "CbToBr")
+                                    {
+                                        string newFromBranch = oDBDS_Header.GetValue("U_T2_From_Branch", 0).Trim();
+                                        string newToBranch = oDBDS_Header.GetValue("U_T2_To_Branch", 0).Trim();
+                                        if ((oldFromBranch != newFromBranch) || (oldToBranch != newToBranch))
+                                        {
+                                            ResetDetail(oForm);
+                                        }
+
+                                        // Checkbox logic
+                                        if (string.IsNullOrEmpty(newFromBranch) && string.IsNullOrEmpty(newToBranch))
+                                            FormHelper.SetValueDS(oForm, "CkBrDS", "Y");
+                                        else
+                                            FormHelper.SetValueDS(oForm, "CkBrDS", "N");
+                                    }
+                                    if (pVal.ItemUID == "CbFromOtl" || pVal.ItemUID == "CbToOtl")
+                                    {
+                                        string newFromOutlet = oDBDS_Header.GetValue("U_T2_From_Outlet", 0).Trim();
+                                        string newToOutlet = oDBDS_Header.GetValue("U_T2_To_Outlet", 0).Trim();
+                                        if ((oldFromOutlet != newFromOutlet) || (oldToOutlet != newToOutlet))
+                                        {
+                                            ResetDetail(oForm);
+                                        }
+
+                                        // Checkbox logic
+                                        if (string.IsNullOrEmpty(newFromOutlet) && string.IsNullOrEmpty(newToOutlet))
+                                            FormHelper.SetValueDS(oForm, "CkOtlDS", "Y");
+                                        else
+                                            FormHelper.SetValueDS(oForm, "CkOtlDS", "N");
+                                    }
+                                }
+
+                            }
+
+                            if (pVal.ItemUID == "CbSeries" && !pVal.BeforeAction)
+                            {
+                                if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_ADD_MODE)
+                                {
+                                    SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
+                                    int seriesId = int.Parse(oDBDS_Header.GetValue("Series", 0)?.Trim());
+                                    int nextDocNum = QueryHelper.GetLastDocNum(seriesId);
+                                    oDBDS_Header.SetValue("DocNum", 0, nextDocNum.ToString());
+                                }
+                            }
+
+                            if (pVal.ItemUID == "BtCbAdd" && !pVal.BeforeAction)
+                            {
+                                var btCb = (SAPbouiCOM.ButtonCombo)oForm.Items.Item("BtCbAdd").Specific;
+                                SelectedAddAction = btCb.Selected.Value;
+                            }
+                        }
+                        catch (Exception)
+                        {
+
+                            throw;
+                        }
+                        finally
+                        {
+                            FormHelper.FinishLoading(oForm);
                         }
                     }
-                    catch (Exception)
-                    {
 
-                        throw;
-                    }
-                    finally
+                    if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_FORM_RESIZE &&
+                        pVal.BeforeAction == false)
                     {
-                        FormHelper.FinishLoading(oForm);
+                        SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(FormUID);
+                        try
+                        {
+                            FormHelper.StartLoading(oForm, "Loading...", 0, false);
+                            if (oForm.Items.Count > 0)
+                            {
+                                AdjustMatrix(oForm);
+                            }
+                        }
+                        catch (Exception)
+                        {
+
+                            throw;
+                        }
+                        finally
+                        {
+                            FormHelper.FinishLoading(oForm);
+                        }
+                    }
+
+                    if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_CHOOSE_FROM_LIST && !pVal.BeforeAction)
+                    {
+                        CflHandler(pVal, FormUID);
                     }
                 }
-
-                if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_CHOOSE_FROM_LIST && !pVal.BeforeAction)
-                {
-                    CflHandler(pVal, FormUID);
-                }
+            }
+            catch (Exception ex)
+            {
+                Application.SBO_Application.StatusBar.SetText(
+                    ex.Message,
+                    SAPbouiCOM.BoMessageTime.bmt_Short,
+                    SAPbouiCOM.BoStatusBarMessageType.smt_Error
+                );
             }
         }
 
@@ -1083,6 +1122,7 @@ namespace EFakturCoretax
                 oForm.Items.Item("CbSeries").Enabled = true;
                 oForm.Items.Item("TDocNum").Enabled = false;
                 oForm.Items.Item("TPostDate").Enabled = true;
+                oForm.Items.Item("TVatRate").Enabled = true;
 
                 oForm.Items.Item("BtCSV").Enabled = false;
                 oForm.Items.Item("BtXML").Enabled = false;
@@ -1179,6 +1219,36 @@ namespace EFakturCoretax
             }
         }
 
+        private void ReviseFilterHandler(string FormUID, int Row)
+        {
+            SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(FormUID);
+            try
+            {
+                if (FindListModel.Any())
+                {
+                    if (Row == 0)
+                    {
+                        ToggleReviseAll(oForm);
+                    }
+                    else
+                    {
+                        ToggleReviseSingle(oForm, Row);
+                    }
+
+                    var selectedRevTrans = FindListModel.Where((f) => f.Revise).ToList();
+                    if (selectedRevTrans.Any())
+                    {
+
+                    }
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
         private void ToggleSelectAll(SAPbouiCOM.Form oForm)
         {
             try
@@ -1232,6 +1302,117 @@ namespace EFakturCoretax
                 if (tempData != null)
                 {
                     tempData.Selected = isChecked;
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        private void ToggleReviseAll(SAPbouiCOM.Form oForm)
+        {
+            try
+            {
+                SAPbouiCOM.Matrix oMatrix = (SAPbouiCOM.Matrix)oForm.Items.Item("MtFind").Specific;
+                SAPbouiCOM.DataTable oDT = oForm.DataSources.DataTables.Item("DT_FILTER");
+
+                bool selectAll = oMatrix.Columns.Item("Col_11").TitleObject.Caption != "Unrevise All";
+
+                List<int> disabledRows = new List<int>();
+
+                for (int i = 0; i < oMatrix.RowCount; i++)
+                {
+                    if(!oMatrix.CommonSetting.GetCellEditable(i + 1, 11))
+                        disabledRows.Add(i);
+                }
+
+                if (oMatrix.RowCount == disabledRows.Count) return;
+
+                for (int i = 0; i < oDT.Rows.Count; i++)
+                {
+                    // update datatable column, e.g. U_Select
+                    if (!disabledRows.Contains(i))
+                    {
+                        oDT.SetValue("Revise", i, selectAll ? "Y" : "N");
+                    }
+                }
+
+                for (int i = 0; i < FindListModel.Count; i++)
+                {
+                    if (!disabledRows.Contains(i))
+                    {
+                        FindListModel[i].Revise = selectAll;
+                        if (!SelectedReviseDoc.Any((s) => s.DocEntry == FindListModel[i].DocEntry && s.ObjType == FindListModel[i].ObjType))
+                        {
+                            SelectedReviseDoc.Add(FindListModel[i]);
+                        }
+                        //SetReviseValue(oForm, FindListModel[i].DocEntry, selectAll ? "Y" : "N");
+                    }
+                }
+
+                oMatrix.LoadFromDataSource();
+                //SetMtGenerate(oForm);
+
+                // update caption
+                oMatrix.Columns.Item("Col_11").TitleObject.Caption = selectAll ? "Unrevise All" : "Revise All";
+
+                //oForm.Mode = SAPbouiCOM.BoFormMode.fm_UPDATE_MODE;
+            }
+            catch (Exception ex)
+            {
+                Application.SBO_Application.StatusBar.SetText(
+                    $"Error: {ex.Message}",
+                    SAPbouiCOM.BoMessageTime.bmt_Short,
+                    SAPbouiCOM.BoStatusBarMessageType.smt_Error);
+            }
+        }
+
+        private void ToggleReviseSingle(SAPbouiCOM.Form oForm, int mtRow)
+        {
+            try
+            {
+                SAPbouiCOM.Matrix oMatrix = (SAPbouiCOM.Matrix)oForm.Items.Item("MtFind").Specific;
+
+                // Get clicked row
+                int row = mtRow - 1;
+
+                // Get checkbox value (grid stores it as string "Y"/"N" or "tYES"/"tNO")
+                bool isChecked = ((SAPbouiCOM.CheckBox)oMatrix.Columns.Item("Col_11").Cells.Item(mtRow).Specific).Checked;
+                SAPbouiCOM.DataTable oDT = oForm.DataSources.DataTables.Item("DT_FILTER");
+
+                string docEntryVal = oDT.GetValue("DocEntry", row).ToString();
+                string objTypeVal = oDT.GetValue("ObjType", row).ToString();
+                var tempData = FindListModel.Where((f) => f.DocEntry == docEntryVal && f.ObjType == objTypeVal).FirstOrDefault();
+                if (tempData != null)
+                {
+                    tempData.Revise = isChecked;
+                    if (!SelectedReviseDoc.Any((s)=>s.DocEntry == tempData.DocEntry && s.ObjType == tempData.ObjType))
+                    {
+                        SelectedReviseDoc.Add(tempData);
+                    }
+                    //SetReviseValue(oForm, docEntryVal, isChecked ? "Y" : "N");
+                    //SetMtGenerate(oForm);
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        private void SetReviseValue(SAPbouiCOM.Form oForm, string docEntry, string val)
+        {
+            try
+            {
+                SAPbouiCOM.DBDataSource oDBDS_Detail = oForm.DataSources.DBDataSources.Item("@T2_CORETAX_DT");
+                for (int i = 0; i < oDBDS_Detail.Size; i++)
+                {
+                    var tempDocEntry = oDBDS_Detail.GetValue("U_T2_DocEntry", i)?.Trim();
+                    if(tempDocEntry == docEntry)
+                        oDBDS_Detail.SetValue("U_T2_Revise", i, val);
                 }
             }
             catch (Exception)
@@ -1568,6 +1749,7 @@ namespace EFakturCoretax
 
             try
             {
+                FormHelper.StartLoading(oForm, "Loading...", 0, false);
                 SAPbouiCOM.DBDataSource oDBDS_Detail = oForm.DataSources.DBDataSources.Item("@T2_CORETAX_DT");
                 // Clear FindListModel
                 if (FindListModel?.Count > 0)
@@ -1588,6 +1770,10 @@ namespace EFakturCoretax
             catch (Exception)
             {
                 throw;
+            }
+            finally
+            {
+                FormHelper.FinishLoading(oForm);
             }
             
         }
@@ -1756,7 +1942,6 @@ namespace EFakturCoretax
         private void ExportToXML(string FormUID)
         {
             SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(FormUID);
-            
             SAPbobsCOM.Company oCompany = null;
 
             try
@@ -1770,7 +1955,7 @@ namespace EFakturCoretax
 
                 SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
                 SAPbouiCOM.DBDataSource oDBDS_Detail = oForm.DataSources.DBDataSources.Item("@T2_CORETAX_DT");
-                
+
                 var status = oDBDS_Header.GetValue("Status", 0)?.Trim();
                 var listData = FormHelper.BuildInvoiceDetailList(oDBDS_Detail);
 
@@ -1792,60 +1977,65 @@ namespace EFakturCoretax
                     $"{confirmStr}Are you sure you want to export this document?",
                     1, "Yes", "No", "");
 
-                if (response != 1) return; // user pressed No
+                if (response != 1) return; // user clicked "No"
 
-                FormHelper.StartLoading(oForm, "Exporting data to XML...", 0, false);
-
-                // === business logic sync ===
-                var docNum = oDBDS_Header.GetValue("DocNum", 0).Trim();
-                var datas = FormHelper.BuildInvoiceDetailList(oDBDS_Detail);
-                var docEntry = int.Parse(oDBDS_Header.GetValue("DocEntry", 0).Trim());
-
-                if (status == "O")
+                // Run export async so UI stays responsive
+                System.Threading.Tasks.Task.Run(() =>
                 {
-                    TransactionService.CloseCoretax(oCompany, docEntry);
-                    TransactionService.UpdateStatusInv(oCompany, docNum, datas);
-                }
-                else
-                {
-                    TransactionService.UpdateStatusInv(oCompany, docNum, datas);
-                }
+                    try
+                    {
+                        var docNum = oDBDS_Header.GetValue("DocNum", 0).Trim();
+                        var datas = FormHelper.BuildInvoiceDetailList(oDBDS_Detail);
+                        var docEntry = int.Parse(oDBDS_Header.GetValue("DocEntry", 0).Trim());
 
-                if (ExportHelper.ExportXml(invoice))
-                {
-                    if (oCompany.InTransaction)
-                        oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
-                    RefreshCurrentForm(oForm);
-                    Application.SBO_Application.StatusBar.SetText(
-                        "Successfully exported to XML.",
-                        SAPbouiCOM.BoMessageTime.bmt_Medium,
-                        SAPbouiCOM.BoStatusBarMessageType.smt_Success);
+                        if (status == "O")
+                        {
+                            TransactionService.CloseCoretax(oCompany, docEntry);
+                            TransactionService.UpdateStatusInv(oCompany, docNum, datas);
+                        }
+                        else
+                        {
+                            TransactionService.UpdateStatusInv(oCompany, docNum, datas);
+                        }
 
-                }
-                else
-                {
-                    if (oCompany.InTransaction)
-                        oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                        if (ExportHelper.ExportXml(invoice))
+                        {
+                            if (oCompany.InTransaction)
+                                oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
 
-                    Application.SBO_Application.StatusBar.SetText(
-                        "Failed to export data to XML.",
-                        SAPbouiCOM.BoMessageTime.bmt_Medium,
-                        SAPbouiCOM.BoStatusBarMessageType.smt_Error);
-                }
+                            RefreshCurrentForm(oForm);
+                            Application.SBO_Application.StatusBar.SetText(
+                                "Successfully exported to XML.",
+                                SAPbouiCOM.BoMessageTime.bmt_Medium,
+                                SAPbouiCOM.BoStatusBarMessageType.smt_Success);
+                        }
+                        else
+                        {
+                            if (oCompany.InTransaction)
+                                oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (oCompany?.InTransaction == true)
+                            oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+
+                        Application.SBO_Application.StatusBar.SetText(
+                            ex.Message,
+                            SAPbouiCOM.BoMessageTime.bmt_Short,
+                            SAPbouiCOM.BoStatusBarMessageType.smt_Error);
+                    }
+                });
             }
             catch (Exception ex)
             {
                 if (oCompany?.InTransaction == true)
                     oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
 
-                System.Threading.Tasks.Task.Run(() =>
-                {
-                    System.Threading.Thread.Sleep(200); // let dialog close
-                    Application.SBO_Application.StatusBar.SetText(
-                        ex.Message,
-                        SAPbouiCOM.BoMessageTime.bmt_Short,
-                        SAPbouiCOM.BoStatusBarMessageType.smt_Error);
-                });
+                Application.SBO_Application.StatusBar.SetText(
+                    ex.Message,
+                    SAPbouiCOM.BoMessageTime.bmt_Short,
+                    SAPbouiCOM.BoStatusBarMessageType.smt_Error);
             }
             finally
             {
@@ -1853,10 +2043,9 @@ namespace EFakturCoretax
             }
         }
 
-        private void ExportToCsv(string FormUID)
+        private void ExportToCSV(string FormUID)
         {
             SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(FormUID);
-            
             SAPbobsCOM.Company oCompany = null;
 
             try
@@ -1870,11 +2059,6 @@ namespace EFakturCoretax
 
                 SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
                 SAPbouiCOM.DBDataSource oDBDS_Detail = oForm.DataSources.DBDataSources.Item("@T2_CORETAX_DT");
-
-                if (string.IsNullOrEmpty(oDBDS_Header.GetValue("U_T2_Posting_Date", 0)?.Trim()))
-                {
-                    throw new Exception("Posting date must be filled in before exporting data.");
-                }
 
                 var status = oDBDS_Header.GetValue("Status", 0)?.Trim();
                 var listData = FormHelper.BuildInvoiceDetailList(oDBDS_Detail);
@@ -1897,45 +2081,55 @@ namespace EFakturCoretax
                     $"{confirmStr}Are you sure you want to export this document?",
                     1, "Yes", "No", "");
 
-                if (response != 1) return; // user pressed No
+                if (response != 1) return; // user clicked "No"
 
-                FormHelper.StartLoading(oForm, "Exporting data to CSV...", 0, false);
-
-                // === business logic sync ===
-                var docNum = oDBDS_Header.GetValue("DocNum", 0).Trim();
-                var datas = FormHelper.BuildInvoiceDetailList(oDBDS_Detail);
-                var docEntry = int.Parse(oDBDS_Header.GetValue("DocEntry", 0).Trim());
-
-                if (status == "O")
+                // Run export async so UI stays responsive
+                System.Threading.Tasks.Task.Run(() =>
                 {
-                    TransactionService.CloseCoretax(oCompany, docEntry);
-                    TransactionService.UpdateStatusInv(oCompany, docNum, datas);
-                }
-                else
-                {
-                    TransactionService.UpdateStatusInv(oCompany, docNum, datas);
-                }
+                    try
+                    {
+                        var docNum = oDBDS_Header.GetValue("DocNum", 0).Trim();
+                        var datas = FormHelper.BuildInvoiceDetailList(oDBDS_Detail);
+                        var docEntry = int.Parse(oDBDS_Header.GetValue("DocEntry", 0).Trim());
 
-                if (ExportHelper.ExportCsv(invoice))
-                {
-                    if (oCompany.InTransaction)
-                        oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
-                    RefreshCurrentForm(oForm);
-                    Application.SBO_Application.StatusBar.SetText(
-                        "Successfully exported to CSV.",
-                        SAPbouiCOM.BoMessageTime.bmt_Medium,
-                        SAPbouiCOM.BoStatusBarMessageType.smt_Success);
-                }
-                else
-                {
-                    if (oCompany.InTransaction)
-                        oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                        if (status == "O")
+                        {
+                            TransactionService.CloseCoretax(oCompany, docEntry);
+                            TransactionService.UpdateStatusInv(oCompany, docNum, datas);
+                        }
+                        else
+                        {
+                            TransactionService.UpdateStatusInv(oCompany, docNum, datas);
+                        }
 
-                    Application.SBO_Application.StatusBar.SetText(
-                        "Failed to export data to CSV.",
-                        SAPbouiCOM.BoMessageTime.bmt_Medium,
-                        SAPbouiCOM.BoStatusBarMessageType.smt_Error);
-                }
+                        if (ExportHelper.ExportCsv(invoice))
+                        {
+                            if (oCompany.InTransaction)
+                                oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
+
+                            RefreshCurrentForm(oForm);
+                            Application.SBO_Application.StatusBar.SetText(
+                                "Successfully exported to CSV.",
+                                SAPbouiCOM.BoMessageTime.bmt_Medium,
+                                SAPbouiCOM.BoStatusBarMessageType.smt_Success);
+                        }
+                        else
+                        {
+                            if (oCompany.InTransaction)
+                                oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (oCompany?.InTransaction == true)
+                            oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+
+                        Application.SBO_Application.StatusBar.SetText(
+                            ex.Message,
+                            SAPbouiCOM.BoMessageTime.bmt_Short,
+                            SAPbouiCOM.BoStatusBarMessageType.smt_Error);
+                    }
+                });
             }
             catch (Exception ex)
             {
@@ -1956,14 +2150,26 @@ namespace EFakturCoretax
         private void BtnGenHandler(SAPbouiCOM.ItemEvent pVal, string FormUID)
         {
             SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(FormUID);
-            //if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_FIND_MODE) return;
+            SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
+            SAPbouiCOM.DBDataSource oDBDS_Detail = oForm.DataSources.DBDataSources.Item("@T2_CORETAX_DT");
+            decimal vatRate = 0;
+            if (decimal.TryParse(
+                    oDBDS_Header.GetValue("U_T2_Coretax_Vat_Rate", 0)?.Trim(),
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture,
+                    out decimal parsedDecimal))
+            {
+                vatRate = parsedDecimal;
+            }
+
+            if (vatRate == 0) throw new Exception("Coretax VAT Rate is required.");
+
             Task.Run(async () =>
             {
                 try
                 {
                     FormHelper.StartLoading(oForm, "Generating data...", 0, false);
 
-                    SAPbouiCOM.DBDataSource oDBDS_Detail = oForm.DataSources.DBDataSources.Item("@T2_CORETAX_DT");
                     while (oDBDS_Detail.Size > 0)
                     {
                         oDBDS_Detail.RemoveRecord(0);
@@ -1973,7 +2179,7 @@ namespace EFakturCoretax
                     var filteredHeader = FindListModel.Where((f) => f.Selected).ToList();
                     if (filteredHeader != null && filteredHeader.Any())
                     {
-                        var listDetail = await TransactionService.GetDataGenerate(filteredHeader);
+                        var listDetail = await TransactionService.GetDataGenerate(filteredHeader,vatRate);
                         if (listDetail.Any())
                         {
                             oDBDS_Detail.Clear(); // optional: clear old rows first
@@ -2026,6 +2232,8 @@ namespace EFakturCoretax
                                 oDBDS_Detail.SetValue("U_T2_Amount_VAT", i, detail.AmountVAT.ToString(CultureInfo.InvariantCulture));
                                 oDBDS_Detail.SetValue("U_T2_STLG_Rate", i, detail.STLGRate.ToString(CultureInfo.InvariantCulture));
                                 oDBDS_Detail.SetValue("U_T2_STLG", i, detail.STLG.ToString(CultureInfo.InvariantCulture));
+                                oDBDS_Detail.SetValue("U_T2_Coretax_Vat_Amount", i, detail.CoretaxVatAmount.ToString(CultureInfo.InvariantCulture));
+                                oDBDS_Detail.SetValue("U_T2_Coretax_Vat_Rate", i, detail.CoretaxVatRate.ToString(CultureInfo.InvariantCulture));
 
                                 // --- strings ---
                                 oDBDS_Detail.SetValue("U_T2_Jenis_Pajak", i, detail.JenisPajak ?? "");
@@ -2041,6 +2249,7 @@ namespace EFakturCoretax
                                 oDBDS_Detail.SetValue("U_T2_Add_Info", i, detail.AddInfo ?? "");
                                 oDBDS_Detail.SetValue("U_T2_Buyer_Country", i, detail.BuyerCountry ?? "");
                                 oDBDS_Detail.SetValue("U_T2_Buyer_Email", i, detail.BuyerEmail ?? "");
+                                oDBDS_Detail.SetValue("U_T2_Revise", i, detail.Revise ?? "N");
                             }
                         }
                         SetMtGenerate(oForm);
@@ -2206,6 +2415,7 @@ namespace EFakturCoretax
                 // Create DataTable if not exists
                 SAPbouiCOM.DataTable oDT;
                 bool selectAll = !FindListModel.Any((f) => !f.Selected);
+                bool reviseAll = !FindListModel.Any((f) => !f.Revise);
 
                 if (!FormHelper.DtIsExists(oForm, "DT_FILTER"))
                 {
@@ -2223,6 +2433,7 @@ namespace EFakturCoretax
 
                 // Define all columns (make sure sizes are large enough)
                 oDT.Columns.Add("Select", SAPbouiCOM.BoFieldsType.ft_AlphaNumeric, 1);
+                oDT.Columns.Add("Revise", SAPbouiCOM.BoFieldsType.ft_AlphaNumeric, 1);
                 oDT.Columns.Add("DocEntry", SAPbouiCOM.BoFieldsType.ft_Integer);
                 oDT.Columns.Add("DocNum", SAPbouiCOM.BoFieldsType.ft_Integer);
                 oDT.Columns.Add("ObjType", SAPbouiCOM.BoFieldsType.ft_Text, 50);
@@ -2236,7 +2447,7 @@ namespace EFakturCoretax
                 oDT.Columns.Add("OutletName", SAPbouiCOM.BoFieldsType.ft_Text, 100);
                 oDT.Columns.Add("#", SAPbouiCOM.BoFieldsType.ft_Integer);
 
-                oForm.Items.Item("BtGen").Enabled = FindListModel.Any((f) => f.Selected);
+                oForm.Items.Item("BtGen").Enabled = (FindListModel.Any((f) => f.Selected));
 
                 // Fill DataTable from model
                 for (int i = 0; i < FindListModel.Count; i++)
@@ -2251,6 +2462,7 @@ namespace EFakturCoretax
                         oDT.SetValue("PostDate", i, "");
 
                     oDT.SetValue("Select", i, row.Selected ? "Y" : "N");
+                    oDT.SetValue("Revise", i, row.Revise ? "Y" : "N");
                     oDT.SetValue("DocEntry", i, row.DocEntry ?? "");
                     oDT.SetValue("DocNum", i, row.DocNo ?? "");
                     oDT.SetValue("BPCode", i, row.CardCode ?? "");
@@ -2286,6 +2498,10 @@ namespace EFakturCoretax
                 oMatrix.Columns.Item("Col_10").Width = 40;
                 oMatrix.Columns.Item("Col_10").TitleObject.Caption = selectAll ? "Unselect All" : "Select All";
                 oMatrix.Columns.Item("Col_10").Editable = status == "O";
+                oMatrix.Columns.Item("Col_11").DataBind.Bind("DT_FILTER", "Revise");
+                oMatrix.Columns.Item("Col_11").Width = 40;
+                oMatrix.Columns.Item("Col_11").TitleObject.Caption = reviseAll ? "Unrevise All" : "Revise All";
+                oMatrix.Columns.Item("Col_11").Editable = false;
                 oMatrix.Columns.Item("#").DataBind.Bind("DT_FILTER", "#");
                 oMatrix.Columns.Item("#").Width = 30;
 
@@ -2306,5 +2522,31 @@ namespace EFakturCoretax
             }
         }
 
+        private void SetReviseMode(SAPbouiCOM.Form oForm)
+        {
+            SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
+            var status = oDBDS_Header.GetValue("Status", 0).Trim();
+            SAPbouiCOM.Matrix oMatrix = (SAPbouiCOM.Matrix)oForm.Items.Item("MtFind").Specific;
+            if (status == "C")
+            {
+                for (int i = 1; i <= oMatrix.RowCount; i++)
+                {
+                    SAPbouiCOM.CheckBox chk = (SAPbouiCOM.CheckBox)oMatrix.Columns.Item("Col_11").Cells.Item(i).Specific;
+                    bool isChecked = chk.Checked;
+                    // set editable per cell
+                    oMatrix.CommonSetting.SetCellEditable(i, 11, !isChecked);
+                }
+            }
+            else
+            {
+                for (int i = 1; i <= oMatrix.RowCount; i++)
+                {
+                    SAPbouiCOM.CheckBox chk = (SAPbouiCOM.CheckBox)oMatrix.Columns.Item("Col_11").Cells.Item(i).Specific;
+                    bool isChecked = chk.Checked;
+                    // set editable per cell
+                    oMatrix.CommonSetting.SetCellEditable(i, 11, false);
+                }
+            }
+        }
     }
 }
