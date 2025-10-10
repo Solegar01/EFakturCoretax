@@ -280,7 +280,8 @@ namespace EFakturCoretax.Services
                             p.BranchCode,
                             p.BranchName,
                             p.OutletCode,
-                            p.OutletName
+                            p.OutletName,
+                            p.Revise
                         })
                         .Select(g => new FilterDataModel
                         {
@@ -295,7 +296,8 @@ namespace EFakturCoretax.Services
                             BranchName = g.Key.BranchName,
                             OutletCode = g.Key.OutletCode,
                             OutletName = g.Key.OutletName,
-                            Selected = true
+                            Selected = true,
+                            Revise = g.Key.Revise == "Y"
                         })
                         .ToList();
 
@@ -321,6 +323,30 @@ namespace EFakturCoretax.Services
                 throw new Exception($"Update Status Invoice error: {ex.Message}");
             }
         }
+
+        public static void ReviseInvoice(SAPbobsCOM.Company oCompany, string docEntry, string objType)
+        {
+            try
+            {
+                switch (objType)
+                {
+                    case "13": // AR Invoice
+                        UpdateArInvoice(oCompany, int.Parse(docEntry), "", "N");
+                        break;
+                    case "14": // AR Credit Memo
+                        UpdateArCreditMemo(oCompany, int.Parse(docEntry), "", "N");
+                        break;
+                    case "203": // AR Down Payment
+                        UpdateArDownPayment(oCompany, int.Parse(docEntry), "", "N");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Revise Invoice error: {ex.Message}");
+            }
+        }
+
 
         public static void UpdateArInvoice(SAPbobsCOM.Company oCompany, int docEntry, string docNum, string status)
         {

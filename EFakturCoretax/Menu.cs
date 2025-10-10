@@ -236,9 +236,10 @@ namespace EFakturCoretax
                                             FormHelper.SetEnabled(oForm, new[] { "BtFilter", "BtGen" }, false);
                                             FormHelper.SetEnabled(oForm, new[] { "CkAllDt", "CkAllDoc", "CkAllCust", "CkAllBr", "CkAllOtl" }, false);
                                             FormHelper.SetEnabled(oForm, new[] { "TFromDt", "TToDt", "TFromDoc", "TToDoc", "TFromCust", "TToCust", "CbFromBr", "CbToBr", "CbFromOtl", "CbToOtl" }, false);
+                                            oForm.Items.Item("BtRev").Enabled = true;
                                         }
 
-                                        SetReviseMode(oForm);
+                                        //SetReviseMode(oForm,false);
 
                                         oForm.Items.Item("TPostDate").Enabled = status == "O";
                                         oForm.Items.Item("TVatRate").Enabled = status == "O";
@@ -315,6 +316,15 @@ namespace EFakturCoretax
 
                     strDocEntry = xmlDoc.SelectSingleNode("//DocEntry")?.InnerText;
                     
+                }
+
+                if (BusinessObjectInfo.EventType == SAPbouiCOM.BoEventTypes.et_FORM_DATA_UPDATE
+                && BusinessObjectInfo.ActionSuccess
+                && !BusinessObjectInfo.BeforeAction
+                && BusinessObjectInfo.FormTypeEx == "EFakturCoretax.MainForm")
+                {
+                    SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.ActiveForm;
+                    SetReviseMode(oForm, false);
                 }
             }
             catch (Exception ex)
@@ -448,7 +458,9 @@ namespace EFakturCoretax
 
                                 FormHelper.SetVisible(oForm, new[] { "CkAllDt", "CkAllDoc", "CkAllCust", "CkAllBr", "CkAllOtl" }, true);
 
-                                SetReviseMode(oForm);
+                                oForm.Items.Item("BtRev").Enabled = status == "C";
+
+                                //SetReviseMode(oForm,false);
                             }
                             catch (Exception)
                             {
@@ -567,7 +579,8 @@ namespace EFakturCoretax
                                     string status = oDBDS_Header.GetValue("Status", 0)?.Trim();
                                     ((SAPbouiCOM.EditText)oForm.Items.Item("TDocNum").Specific).Value = docNum;
                                     ((SAPbouiCOM.EditText)oForm.Items.Item("TStatus").Specific).Value = status == "O" ? "Open" : "Closed";
-                                    SetReviseMode(oForm);
+                                    oForm.Items.Item("BtRev").Enabled = status == "C";
+                                    //SetReviseMode(oForm,false);
                                 }
                             }
                         }
@@ -622,6 +635,7 @@ namespace EFakturCoretax
                                                     oForm.Items.Item("1").Visible = false;
                                                     oForm.Items.Item("BtCbAdd").Visible = true;
                                                 }
+                                                
                                                 BubbleEvent = false;
                                                 return;
                                             }
@@ -639,6 +653,45 @@ namespace EFakturCoretax
                                                 }
                                                 BubbleEvent = false;
                                                 return;
+                                            }
+                                        }
+                                    }
+                                    if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_UPDATE_MODE)
+                                    {
+                                        if (SelectedReviseDoc.Any())
+                                        {
+                                            int response = Application.SBO_Application.MessageBox(
+                                        $"Are you sure you want to revise?",
+                                        1, "Yes", "No", "");
+
+                                            if (response != 1) { BubbleEvent = false; return; }
+
+                                            SAPbobsCOM.Company oCompany = CompanyService.GetCompany();
+                                            try
+                                            {
+                                                if (!oCompany.InTransaction)
+                                                {
+                                                    oCompany.StartTransaction();
+                                                }
+                                                foreach (var item in SelectedReviseDoc)
+                                                {
+                                                    if (item.Revise)
+                                                    {
+                                                        TransactionService.ReviseInvoice(oCompany, item.DocEntry, item.ObjType);
+                                                    }
+                                                }
+                                                if (oCompany.InTransaction)
+                                                {
+                                                    oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
+                                                }
+                                            }
+                                            catch (Exception)
+                                            {
+                                                if (oCompany.InTransaction)
+                                                {
+                                                    oCompany.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
+                                                }
+                                                throw;
                                             }
                                         }
                                     }
@@ -726,13 +779,15 @@ namespace EFakturCoretax
                                     }
                                 }
 
-                                //if (pVal.ItemUID == "BtRev")
-                                //{
-                                //    if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_OK_MODE)
-                                //    {
-                                        
-                                //    }
-                                //}
+                                if (pVal.ItemUID == "BtRev")
+                                {
+                                    if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_OK_MODE)
+                                    {
+                                        SetReviseMode(oForm,true);
+                                        oForm.Items.Item("BtCSV").Enabled = false;
+                                        oForm.Items.Item("BtXML").Enabled = false;
+                                    }
+                                }
                             }
                         }
                         catch (Exception ex)
@@ -1344,17 +1399,18 @@ namespace EFakturCoretax
                         {
                             SelectedReviseDoc.Add(FindListModel[i]);
                         }
-                        //SetReviseValue(oForm, FindListModel[i].DocEntry, selectAll ? "Y" : "N");
+                        SetReviseValue(oForm, FindListModel[i].DocEntry, selectAll ? "Y" : "N");
                     }
                 }
 
                 oMatrix.LoadFromDataSource();
-                //SetMtGenerate(oForm);
-
+                SetMtGenerate(oForm);
                 // update caption
                 oMatrix.Columns.Item("Col_11").TitleObject.Caption = selectAll ? "Unrevise All" : "Revise All";
-
-                //oForm.Mode = SAPbouiCOM.BoFormMode.fm_UPDATE_MODE;
+                if (SelectedReviseDoc.Any())
+                {
+                    oForm.Mode = SAPbouiCOM.BoFormMode.fm_UPDATE_MODE;
+                }
             }
             catch (Exception ex)
             {
@@ -1380,7 +1436,7 @@ namespace EFakturCoretax
 
                 string docEntryVal = oDT.GetValue("DocEntry", row).ToString();
                 string objTypeVal = oDT.GetValue("ObjType", row).ToString();
-                var tempData = FindListModel.Where((f) => f.DocEntry == docEntryVal && f.ObjType == objTypeVal).FirstOrDefault();
+                var tempData = FindListModel.FirstOrDefault((f) => f.DocEntry == docEntryVal && f.ObjType == objTypeVal);
                 if (tempData != null)
                 {
                     tempData.Revise = isChecked;
@@ -1388,8 +1444,8 @@ namespace EFakturCoretax
                     {
                         SelectedReviseDoc.Add(tempData);
                     }
-                    //SetReviseValue(oForm, docEntryVal, isChecked ? "Y" : "N");
-                    //SetMtGenerate(oForm);
+                    SetReviseValue(oForm, docEntryVal, isChecked ? "Y" : "N");
+                    SetMtGenerate(oForm);
                 }
             }
             catch (Exception)
@@ -1533,6 +1589,7 @@ namespace EFakturCoretax
                 oMatrix.Columns.Item("DocEntry").Visible = false;
                 oMatrix.Columns.Item("LineNum").Visible = false;
                 oMatrix.Columns.Item("TIN").Visible = false;
+                oMatrix.Columns.Item("Col_40").Visible = false;
 
                 int white = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.White);
 
@@ -1954,6 +2011,11 @@ namespace EFakturCoretax
                 if (listData == null || !listData.Any())
                     throw new Exception("No data to Export.");
 
+                listData = listData.Where((x) => x.Revise != "Y").ToList();
+
+                if (listData == null || !listData.Any())
+                    throw new Exception("No data to Export. All documents have been revised.");
+
                 var listOfTax = FormHelper.BuildTaxInvoiceList(listData);
                 if (!listOfTax.Any())
                     throw new Exception("No data to Export.");
@@ -1983,10 +2045,6 @@ namespace EFakturCoretax
                         if (status == "O")
                         {
                             TransactionService.CloseCoretax(oCompany, docEntry);
-                            TransactionService.UpdateStatusInv(oCompany, docNum, datas);
-                        }
-                        else
-                        {
                             TransactionService.UpdateStatusInv(oCompany, docNum, datas);
                         }
 
@@ -2058,6 +2116,11 @@ namespace EFakturCoretax
                 if (listData == null || !listData.Any())
                     throw new Exception("No data to Export.");
 
+                listData = listData.Where((x) => x.Revise != "Y").ToList();
+
+                if (listData == null || !listData.Any())
+                    throw new Exception("No data to Export. All documents have been revised.");
+
                 var listOfTax = FormHelper.BuildTaxInvoiceList(listData);
                 if (!listOfTax.Any())
                     throw new Exception("No data to Export.");
@@ -2087,10 +2150,6 @@ namespace EFakturCoretax
                         if (status == "O")
                         {
                             TransactionService.CloseCoretax(oCompany, docEntry);
-                            TransactionService.UpdateStatusInv(oCompany, docNum, datas);
-                        }
-                        else
-                        {
                             TransactionService.UpdateStatusInv(oCompany, docNum, datas);
                         }
 
@@ -2513,29 +2572,38 @@ namespace EFakturCoretax
             }
         }
 
-        private void SetReviseMode(SAPbouiCOM.Form oForm)
+        private void SetReviseMode(SAPbouiCOM.Form oForm, bool active)
         {
             SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
             var status = oDBDS_Header.GetValue("Status", 0).Trim();
             SAPbouiCOM.Matrix oMatrix = (SAPbouiCOM.Matrix)oForm.Items.Item("MtFind").Specific;
-            if (status == "C")
+            if (!active)
             {
                 for (int i = 1; i <= oMatrix.RowCount; i++)
                 {
-                    SAPbouiCOM.CheckBox chk = (SAPbouiCOM.CheckBox)oMatrix.Columns.Item("Col_11").Cells.Item(i).Specific;
-                    bool isChecked = chk.Checked;
                     // set editable per cell
-                    oMatrix.CommonSetting.SetCellEditable(i, 11, !isChecked);
+                    oMatrix.CommonSetting.SetCellEditable(i, 11, false);
                 }
             }
             else
             {
-                for (int i = 1; i <= oMatrix.RowCount; i++)
+                if (status == "C")
                 {
-                    SAPbouiCOM.CheckBox chk = (SAPbouiCOM.CheckBox)oMatrix.Columns.Item("Col_11").Cells.Item(i).Specific;
-                    bool isChecked = chk.Checked;
-                    // set editable per cell
-                    oMatrix.CommonSetting.SetCellEditable(i, 11, false);
+                    for (int i = 1; i <= oMatrix.RowCount; i++)
+                    {
+                        SAPbouiCOM.CheckBox chk = (SAPbouiCOM.CheckBox)oMatrix.Columns.Item("Col_11").Cells.Item(i).Specific;
+                        bool isChecked = chk.Checked;
+                        // set editable per cell
+                        oMatrix.CommonSetting.SetCellEditable(i, 11, !isChecked);
+                    }
+                }
+                else
+                {
+                    for (int i = 1; i <= oMatrix.RowCount; i++)
+                    {
+                        // set editable per cell
+                        oMatrix.CommonSetting.SetCellEditable(i, 11, false);
+                    }
                 }
             }
         }
