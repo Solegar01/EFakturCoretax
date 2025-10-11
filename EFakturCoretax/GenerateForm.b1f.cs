@@ -5,10 +5,10 @@ using System.Xml;
 
 namespace EFakturCoretax
 {
-    [FormAttribute("EFakturCoretax.MainForm", "MainForm.b1f")]
-    class MainForm : UserFormBase
+    [FormAttribute("EFakturCoretax.GenerateForm", "GenerateForm.b1f")]
+    class GenerateForm : UserFormBase
     {
-        public MainForm()
+        public GenerateForm()
         {
         }
 

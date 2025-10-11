@@ -66,25 +66,36 @@
     <Reference Include="SAPBusinessOneSDK" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FormHandlers\GenerateFormHandler.cs" />
     <Compile Include="Helpers\ExportHelper.cs" />
+    <Compile Include="ImportCoretaxForm.b1f.cs">
+      <DependentUpon>ImportCoretaxForm.b1f</DependentUpon>
+    </Compile>
     <Compile Include="Models\CoretaxModel.cs" />
     <Compile Include="Models\FilterDataModel.cs" />
     <Compile Include="Models\XmlModel.cs" />
     <Compile Include="Services\TransactionService.cs" />
     <Compile Include="Services\CompanyServices.cs" />
-    <None Include="MainForm.b1f">
+    <None Include="ImportCoretaxForm.b1f">
+      <FormCategory>UserForm</FormCategory>
+    </None>
+    <None Include="GenerateForm.b1f">
       <FormCategory>UserForm</FormCategory>
     </None>
     <Compile Include="Helpers\FormHelper.cs" />
     <Compile Include="Helpers\QueryHelper.cs" />
-    <Compile Include="MainForm.b1f.cs">
-      <DependentUpon>MainForm.b1f</DependentUpon>
+    <Compile Include="GenerateForm.b1f.cs">
+      <DependentUpon>GenerateForm.b1f</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Menu.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="Icons\coretax_logo.bmp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

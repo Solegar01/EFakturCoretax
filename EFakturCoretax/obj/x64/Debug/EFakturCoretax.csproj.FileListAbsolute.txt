@@ -6,3 +6,12 @@ C:\Think Tank\Src\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.csp
 C:\Think Tank\Src\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.csproj.CopyComplete
 C:\Think Tank\Src\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.exe
 C:\Think Tank\Src\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.pdb
+D:\Source\Add On\EFakturCoretax\EFakturCoretax\bin\x64\Debug\Icons\coretax_logo.bmp
+D:\Source\Add On\EFakturCoretax\EFakturCoretax\bin\x64\Debug\EFakturCoretax.exe
+D:\Source\Add On\EFakturCoretax\EFakturCoretax\bin\x64\Debug\EFakturCoretax.pdb
+D:\Source\Add On\EFakturCoretax\EFakturCoretax\bin\x64\Debug\SAPBusinessOneSDK.dll
+D:\Source\Add On\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.csproj.AssemblyReference.cache
+D:\Source\Add On\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.csproj.CoreCompileInputs.cache
+D:\Source\Add On\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.csproj.CopyComplete
+D:\Source\Add On\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.exe
+D:\Source\Add On\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.pdb
