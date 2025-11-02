@@ -47,104 +47,102 @@ namespace EFakturCoretax.Services
             }
         }
 
-        public static Task<List<FilterDataModel>> GetDataFilter(
+        public static List<FilterDataModel> GetDataFilter(
             Dictionary<string, bool> selectedCkBox,
             string dtFrom, string dtTo, string docFrom, string docTo, string custFrom, string custTo,
             string branchFrom, string branchTo, string outFrom, string outTo
             )
         {
-            return Task.Run(() => {
-                List<FilterDataModel> result = new List<FilterDataModel>();
-                try
-                {
-                    SAPbobsCOM.Company oCompany = Services.CompanyService.GetCompany();
-                    List<string> docList = selectedCkBox.Where((ck) => ck.Value == true).Select((c) => c.Key).ToList();
-                    SAPbobsCOM.Recordset rs = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+            List<FilterDataModel> result = new List<FilterDataModel>();
+            try
+            {
+                SAPbobsCOM.Company oCompany = Services.CompanyService.GetCompany();
+                List<string> docList = selectedCkBox.Where((ck) => ck.Value == true).Select((c) => c.Key).ToList();
+                SAPbobsCOM.Recordset rs = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
 
-                    string query = $@"EXEC [dbo].[T2_SP_CORETAX_HEADER] 
+                string query = $@"EXEC [dbo].[T2_SP_CORETAX_HEADER] 
     @selected_doc = '{string.Join(",", docList)}'";
 
-                    List<string> filters = new List<string>();
+                List<string> filters = new List<string>();
 
-                    if (!string.IsNullOrEmpty(dtFrom))
-                    {
-                        filters.Add($"@from_date = '{dtFrom}'");
-                    }
-                    if (!string.IsNullOrEmpty(dtTo))
-                    {
-                        filters.Add($"@to_date = '{dtTo}'");
-                    }
-                    if (!string.IsNullOrEmpty(docFrom))
-                    {
-                        filters.Add($"@from_docentry = {docFrom}");
-                    }
-                    if (!string.IsNullOrEmpty(docTo))
-                    {
-                        filters.Add($"@to_docentry = {docTo}");
-                    }
-                    if (!string.IsNullOrEmpty(custFrom))
-                    {
-                        filters.Add($"@from_cust = '{custFrom}'");
-                    }
-                    if (!string.IsNullOrEmpty(custTo))
-                    {
-                        filters.Add($"@to_cust = '{custTo}'");
-                    }
-                    if (!string.IsNullOrEmpty(branchFrom))
-                    {
-                        filters.Add($"@from_branch = {branchFrom}");
-                    }
-                    if (!string.IsNullOrEmpty(branchTo))
-                    {
-                        filters.Add($"@to_branch = {branchTo}");
-                    }
-                    if (!string.IsNullOrEmpty(outFrom))
-                    {
-                        filters.Add($"@from_outlet = '{outFrom}'");
-                    }
-                    if (!string.IsNullOrEmpty(outTo))
-                    {
-                        filters.Add($"@to_outlet = '{outTo}'");
-                    }
-
-                    // join filters with commas
-                    if (filters.Count > 0)
-                    {
-                        query += ", " + string.Join(", ", filters);
-                    }
-
-                    rs.DoQuery(query);
-
-                    while (!rs.EoF)
-                    {
-                        var model = new FilterDataModel
-                        {
-                            DocEntry = rs.Fields.Item("DocEntry").Value?.ToString(),
-                            DocNo = rs.Fields.Item("NoDocument").Value?.ToString(),
-                            CardCode = rs.Fields.Item("BPCode").Value?.ToString(),
-                            CardName = rs.Fields.Item("BPName").Value?.ToString(),
-                            ObjType = rs.Fields.Item("ObjectType").Value?.ToString(),
-                            ObjName = rs.Fields.Item("ObjectName").Value?.ToString(),
-                            PostDate = rs.Fields.Item("InvDate").Value?.ToString(),
-                            BranchCode = rs.Fields.Item("BranchCode").Value?.ToString(),
-                            BranchName = rs.Fields.Item("BranchName").Value?.ToString(),
-                            OutletCode = rs.Fields.Item("OutletCode").Value?.ToString(),
-                            OutletName = rs.Fields.Item("OutletName").Value?.ToString(),
-                            Selected = false,
-                            Revise = false,
-                        };
-
-                        result.Add(model);
-                        rs.MoveNext();
-                    }
-                }
-                catch (Exception)
+                if (!string.IsNullOrEmpty(dtFrom))
                 {
-
-                    throw;
+                    filters.Add($"@from_date = '{dtFrom}'");
                 }
-                return Task.FromResult(result);
-            });
+                if (!string.IsNullOrEmpty(dtTo))
+                {
+                    filters.Add($"@to_date = '{dtTo}'");
+                }
+                if (!string.IsNullOrEmpty(docFrom))
+                {
+                    filters.Add($"@from_docentry = {docFrom}");
+                }
+                if (!string.IsNullOrEmpty(docTo))
+                {
+                    filters.Add($"@to_docentry = {docTo}");
+                }
+                if (!string.IsNullOrEmpty(custFrom))
+                {
+                    filters.Add($"@from_cust = '{custFrom}'");
+                }
+                if (!string.IsNullOrEmpty(custTo))
+                {
+                    filters.Add($"@to_cust = '{custTo}'");
+                }
+                if (!string.IsNullOrEmpty(branchFrom))
+                {
+                    filters.Add($"@from_branch = {branchFrom}");
+                }
+                if (!string.IsNullOrEmpty(branchTo))
+                {
+                    filters.Add($"@to_branch = {branchTo}");
+                }
+                if (!string.IsNullOrEmpty(outFrom))
+                {
+                    filters.Add($"@from_outlet = '{outFrom}'");
+                }
+                if (!string.IsNullOrEmpty(outTo))
+                {
+                    filters.Add($"@to_outlet = '{outTo}'");
+                }
+
+                // join filters with commas
+                if (filters.Count > 0)
+                {
+                    query += ", " + string.Join(", ", filters);
+                }
+
+                rs.DoQuery(query);
+
+                while (!rs.EoF)
+                {
+                    var model = new FilterDataModel
+                    {
+                        DocEntry = rs.Fields.Item("DocEntry").Value?.ToString(),
+                        DocNo = rs.Fields.Item("NoDocument").Value?.ToString(),
+                        CardCode = rs.Fields.Item("BPCode").Value?.ToString(),
+                        CardName = rs.Fields.Item("BPName").Value?.ToString(),
+                        ObjType = rs.Fields.Item("ObjectType").Value?.ToString(),
+                        ObjName = rs.Fields.Item("ObjectName").Value?.ToString(),
+                        PostDate = rs.Fields.Item("InvDate").Value?.ToString(),
+                        BranchCode = rs.Fields.Item("BranchCode").Value?.ToString(),
+                        BranchName = rs.Fields.Item("BranchName").Value?.ToString(),
+                        OutletCode = rs.Fields.Item("OutletCode").Value?.ToString(),
+                        OutletName = rs.Fields.Item("OutletName").Value?.ToString(),
+                        Selected = false,
+                        Revise = false,
+                    };
+
+                    result.Add(model);
+                    rs.MoveNext();
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            return result;
         }
 
         public static Task<List<InvoiceDataModel>> GetDataGenerate(List<FilterDataModel> filteredHeader, decimal vatRate)
@@ -433,6 +431,123 @@ namespace EFakturCoretax.Services
                     {
                         oCompany.GetLastError(out int errCode, out string errMsg);
                         throw new Exception($"Failed to update OINV UDF. Error {errCode}: {errMsg}");
+                    }
+                }
+            }
+            finally
+            {
+                if (oInvoice != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(oInvoice);
+            }
+
+        }
+
+        public static void UpdateFakturArInvoice(SAPbobsCOM.Company oCompany, string docNum, string coretaxNo)
+        {
+            SAPbobsCOM.Documents oInvoice = null;
+
+            try
+            {
+                // Get the invoice
+                oInvoice = (SAPbobsCOM.Documents)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInvoices);
+                int docEntry = 0;
+                SAPbobsCOM.Recordset rs = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+                string query = $"SELECT DocEntry FROM OINV WHERE DocNum = '{docNum}'";
+                rs.DoQuery(query);
+                if (!rs.EoF)
+                {
+                    docEntry = (int)rs.Fields.Item("DocEntry").Value;
+                }
+
+                if (oInvoice.GetByKey(docEntry))
+                {
+                    // Set the UDF value
+                    oInvoice.UserFields.Fields.Item("U_T2_FakturPajak").Value = coretaxNo;
+
+                    // Update the invoice
+                    int retCode = oInvoice.Update();
+                    if (retCode != 0)
+                    {
+                        oCompany.GetLastError(out int errCode, out string errMsg);
+                        throw new Exception($"Failed to update Invoice Faktur Pajak. Error {errCode}: {errMsg}");
+                    }
+                }
+            }
+            finally
+            {
+                if (oInvoice != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(oInvoice);
+            }
+
+        }
+
+        public static void UpdateFakturArDownPayment(SAPbobsCOM.Company oCompany, string docNum, string coretaxNo)
+        {
+            SAPbobsCOM.Documents oInvoice = null;
+
+            try
+            {
+                // Get the invoice
+                oInvoice = (SAPbobsCOM.Documents)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oDownPayments);
+                int docEntry = 0;
+                SAPbobsCOM.Recordset rs = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+                string query = $"SELECT DocEntry FROM ODPI WHERE DocNum = '{docNum}'";
+                rs.DoQuery(query);
+                if (!rs.EoF)
+                {
+                    docEntry = (int)rs.Fields.Item("DocEntry").Value;
+                }
+
+                if (oInvoice.GetByKey(docEntry))
+                {
+                    // Set the UDF value
+                    oInvoice.UserFields.Fields.Item("U_T2_FakturPajak").Value = coretaxNo;
+
+                    // Update the invoice
+                    int retCode = oInvoice.Update();
+                    if (retCode != 0)
+                    {
+                        oCompany.GetLastError(out int errCode, out string errMsg);
+                        throw new Exception($"Failed to update Down Payment Faktur Pajak. Error {errCode}: {errMsg}");
+                    }
+                }
+            }
+            finally
+            {
+                if (oInvoice != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(oInvoice);
+            }
+
+        }
+
+        public static void UpdateFakturArCreditMemo(SAPbobsCOM.Company oCompany, string docNum, string coretaxNo)
+        {
+            SAPbobsCOM.Documents oInvoice = null;
+
+            try
+            {
+                // Get the invoice
+                oInvoice = (SAPbobsCOM.Documents)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oCreditNotes);
+                int docEntry = 0;
+                SAPbobsCOM.Recordset rs = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+                string query = $"SELECT DocEntry FROM ORIN WHERE DocNum = '{docNum}'";
+                rs.DoQuery(query);
+                if (!rs.EoF)
+                {
+                    docEntry = (int)rs.Fields.Item("DocEntry").Value;
+                }
+
+                if (oInvoice.GetByKey(docEntry))
+                {
+                    // Set the UDF value
+                    oInvoice.UserFields.Fields.Item("U_T2_FakturPajak").Value = coretaxNo;
+
+                    // Update the invoice
+                    int retCode = oInvoice.Update();
+                    if (retCode != 0)
+                    {
+                        oCompany.GetLastError(out int errCode, out string errMsg);
+                        throw new Exception($"Failed to update Credit Notes Faktur Pajak. Error {errCode}: {errMsg}");
                     }
                 }
             }

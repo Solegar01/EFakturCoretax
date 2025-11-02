@@ -15,44 +15,22 @@ namespace EFakturCoretax
 {
     class Menu
     {
-        private Dictionary<string, bool> SelectedCkBox = new Dictionary<string, bool>()
-            {
-                { "OINV", false},
-                { "ODPI", false},
-                { "ORIN", false},
-            };
-        private Dictionary<string, string> addActions = new Dictionary<string, string>() 
-        {
-            {"1", "Add & View"},
-            {"2", "Add & New"},
-        };
-        private string SelectedAddAction = "1";
-        private List<FilterDataModel> FindListModel = new List<FilterDataModel>();
-        private Dictionary<string, string> cbBranchValues = new Dictionary<string, string>();
-        private Dictionary<string, string> cbOutletValues = new Dictionary<string, string>();
-        DateTime? oldFromDt = null;
-        DateTime? oldToDt = null;
-
-        int oldFromDocEntry = 0;
-        int oldToDocEntry = 0;
-
-        string oldFromCust = string.Empty;
-        string oldToCust = string.Empty;
-
-        string oldFromBranch = string.Empty;
-        string oldToBranch = string.Empty;
-
-        string oldFromOutlet = string.Empty;
-        string oldToOutlet = string.Empty;
-        string strDocEntry = string.Empty;
-
-        decimal oldVatRate = 0;
-        private List<FilterDataModel> SelectedReviseDoc = new List<FilterDataModel>();
+        
         string IconFolder = "";
+        GenerateFormHandler generateFormHandler;
+        ImportCoretaxFormHandler importCoretaxFormHandler;
 
         public Menu()
         {
             IconFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Icons");
+            generateFormHandler = new GenerateFormHandler();
+            Application.SBO_Application.MenuEvent += generateFormHandler.SBO_Application_MenuEvent;
+            Application.SBO_Application.ItemEvent += generateFormHandler.SBO_Application_ItemEvent;
+            Application.SBO_Application.FormDataEvent += generateFormHandler.SBO_Application_FormDataEvent;
+            importCoretaxFormHandler = new ImportCoretaxFormHandler();
+            Application.SBO_Application.MenuEvent += importCoretaxFormHandler.SBO_Application_MenuEvent;
+            Application.SBO_Application.ItemEvent += importCoretaxFormHandler.SBO_Application_ItemEvent;
+            Application.SBO_Application.FormDataEvent += importCoretaxFormHandler.SBO_Application_FormDataEvent;
         }
 
         public void AddMenuItems()
@@ -90,11 +68,9 @@ namespace EFakturCoretax
             try
             {
                 // Get the menu collection of the newly added pop-up item
-                var generateFormHandler = new GenerateFormHandler();
                 oMenuItem = Application.SBO_Application.Menus.Item("EFakturCoretax");
-                Application.SBO_Application.MenuEvent += generateFormHandler.SBO_Application_MenuEvent;
-                Application.SBO_Application.ItemEvent += generateFormHandler.SBO_Application_ItemEvent;
-                Application.SBO_Application.FormDataEvent += generateFormHandler.SBO_Application_FormDataEvent;
+                Application.SBO_Application.FormDataEvent += SBO_Application_FormDataEvent;
+                Application.SBO_Application.ItemEvent += SBO_Application_ItemEvent;
                 oMenus = oMenuItem.SubMenus;
 
                 // Create s sub menu
@@ -124,18 +100,107 @@ namespace EFakturCoretax
                 {
                     GenerateForm activeForm = new GenerateForm();
                     activeForm.Show();
+                    
                 }
 
                 if (pVal.BeforeAction && pVal.MenuUID == "EFakturCoretax.ImportCoretaxForm")
                 {
+
                     ImportCoretaxForm activeForm = new ImportCoretaxForm();
                     activeForm.Show();
+                    
                 }
 
             }
             catch (Exception ex)
             {
                 Application.SBO_Application.MessageBox(ex.ToString(), 1, "Ok", "", "");
+            }
+        }
+
+        public void SBO_Application_FormDataEvent(ref SAPbouiCOM.BusinessObjectInfo BusinessObjectInfo, out bool BubbleEvent)
+        {
+            BubbleEvent = true;
+
+            try
+            {
+                var udfFormIds = new[]
+                {
+                    "133",     // AR Invoice
+                    "65300",   // AR Down Payment
+                    "179"      // AR Credit Memo
+                };
+
+                if (BusinessObjectInfo.EventType == SAPbouiCOM.BoEventTypes.et_FORM_DATA_LOAD
+                    && !BusinessObjectInfo.BeforeAction
+                    && udfFormIds.Contains(BusinessObjectInfo.FormTypeEx))
+                {
+                    try
+                    {
+                        SAPbouiCOM.Form oForm = null;
+
+                        for (int i = 0; i < Application.SBO_Application.Forms.Count; i++)
+                        {
+                            SAPbouiCOM.Form form = Application.SBO_Application.Forms.Item(i);
+                            string formType = form.TypeEx;
+                            string formUID = form.UniqueID;
+
+                            if (formType == $"-{BusinessObjectInfo.FormTypeEx}")
+                            {
+                                oForm = form;
+                            }
+                        }
+
+                        if (oForm != null)
+                        {
+                            oForm.Items.Item("U_T2_Exported").Enabled = false;
+                            oForm.Items.Item("U_T2_Coretax_No").Enabled = false;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                        // UDF form not available (not open yet)
+                    }
+                }
+
+
+            }
+            catch (Exception ex)
+            {
+                Application.SBO_Application.StatusBar.SetText(
+                    "FormDataEvent error: " + ex.Message,
+                    SAPbouiCOM.BoMessageTime.bmt_Short,
+                    SAPbouiCOM.BoStatusBarMessageType.smt_Error
+                );
+            }
+        }
+
+        public void SBO_Application_ItemEvent(string FormUID, ref SAPbouiCOM.ItemEvent pVal, out bool BubbleEvent)
+        {
+            BubbleEvent = true;
+            var udfFormIds = new[] { "-133", "-65300", "-179" };
+            try
+            {
+                if (udfFormIds.Contains(pVal.FormTypeEx))
+                {
+                    if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_FORM_LOAD
+                    && !pVal.BeforeAction) // After form loaded
+                    {
+                        SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(FormUID);
+                        oForm.Items.Item("U_T2_Exported").Enabled = false;
+                        oForm.Items.Item("U_T2_Coretax_No").Enabled = false;
+                    }
+                }
+                
+            }
+            catch (Exception ex)
+            {
+                Application.SBO_Application.StatusBar.SetText(
+                    ex.Message,
+                    SAPbouiCOM.BoMessageTime.bmt_Short,
+                    SAPbouiCOM.BoStatusBarMessageType.smt_Error
+                );
             }
         }
 

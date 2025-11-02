@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AddOnManifest>
+  <PackageName>EFakturCoretax</PackageName>
+  <PackageDescription>EFaktur Coretax Add-On for SAP B1 HANA</PackageDescription>
+  <PackageType>Extension</PackageType>
+  <Version>1.0.0.1</Version>
+  <CompatibleSAPB1Version>10.0</CompatibleSAPB1Version>
+  <SupportedPlatform>Windows</SupportedPlatform>
+</AddOnManifest>

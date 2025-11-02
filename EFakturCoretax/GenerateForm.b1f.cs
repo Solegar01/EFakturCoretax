@@ -1,4 +1,5 @@
-﻿using SAPbouiCOM.Framework;
+﻿using EFakturCoretax.FormHandlers;
+using SAPbouiCOM.Framework;
 using System;
 using System.Collections.Generic;
 using System.Xml;
@@ -10,6 +11,7 @@ namespace EFakturCoretax
     {
         public GenerateForm()
         {
+            
         }
 
         /// <summary>
@@ -74,6 +76,7 @@ namespace EFakturCoretax
             this.Button7 = ((SAPbouiCOM.Button)(this.GetItem("BtRev").Specific));
             this.StaticText22 = ((SAPbouiCOM.StaticText)(this.GetItem("LVatRate").Specific));
             this.EditText10 = ((SAPbouiCOM.EditText)(this.GetItem("TVatRate").Specific));
+            this.Button8 = ((SAPbouiCOM.Button)(this.GetItem("BtOk").Specific));
             this.OnCustomInitialize();
 
         }
@@ -151,5 +154,6 @@ namespace EFakturCoretax
         private SAPbouiCOM.StaticText StaticText21;
         private SAPbouiCOM.StaticText StaticText22;
         private SAPbouiCOM.EditText EditText10;
+        private SAPbouiCOM.Button Button8;
     }
 }
