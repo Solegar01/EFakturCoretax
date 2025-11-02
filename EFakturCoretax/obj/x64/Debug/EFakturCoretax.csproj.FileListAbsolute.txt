@@ -32,4 +32,3 @@ D:\Source\Add On\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.cspr
 D:\Source\Add On\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.csproj.CopyComplete
 D:\Source\Add On\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.exe
 D:\Source\Add On\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.pdb
-D:\Source\Add On\EFakturCoretax\EFakturCoretax\obj\x64\Debug\EFakturCoretax.csproj.AssemblyReference.cache

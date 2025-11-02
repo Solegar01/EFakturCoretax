@@ -455,28 +455,44 @@ namespace EFakturCoretax.FormHandlers
 
                     if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_KEY_DOWN && pVal.BeforeAction)
                     {
-                        SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(pVal.FormUID);
-                        if (oForm.Mode != SAPbouiCOM.BoFormMode.fm_ADD_MODE)
+                        try
                         {
-                            var btDflt = (SAPbouiCOM.Button)oForm.Items.Item("1").Specific;
-                            ((SAPbouiCOM.Button)oForm.Items.Item("BtOk").Specific).Caption = btDflt.Caption;
-
-                            if (btDflt.Caption.ToLower() == "update")
+                            SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(pVal.FormUID);
+                            if (oForm.Mode != SAPbouiCOM.BoFormMode.fm_ADD_MODE)
                             {
-                                FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, false);
+                                var btDflt = (SAPbouiCOM.Button)oForm.Items.Item("1").Specific;
+                                ((SAPbouiCOM.Button)oForm.Items.Item("BtOk").Specific).Caption = btDflt.Caption;
+
+                                if (btDflt.Caption.ToLower() == "update")
+                                {
+                                    FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, false);
+                                }
                             }
+                        }
+                        catch (Exception)
+                        {
+
+                            throw;
                         }
                     }
 
                     if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_KEY_DOWN && !pVal.BeforeAction)
                     {
-                        // Check if ENTER key pressed
-                        if (pVal.CharPressed == 13) // 13 = ENTER key
+                        try
                         {
-                            SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(pVal.FormUID);
+                            // Check if ENTER key pressed
+                            if (pVal.CharPressed == 13) // 13 = ENTER key
+                            {
+                                SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(pVal.FormUID);
 
-                            var oButton = (SAPbouiCOM.Button)oForm.Items.Item("BtOk").Specific;
-                            oButton.Item.Click(SAPbouiCOM.BoCellClickType.ct_Regular);
+                                var oButton = (SAPbouiCOM.Button)oForm.Items.Item("BtOk").Specific;
+                                oButton.Item.Click(SAPbouiCOM.BoCellClickType.ct_Regular);
+                            }
+                        }
+                        catch (Exception)
+                        {
+
+                            throw;
                         }
                     }
 
@@ -738,11 +754,17 @@ namespace EFakturCoretax.FormHandlers
                                     ((SAPbouiCOM.Button)oForm.Items.Item("BtOk").Specific).Caption = btDflt.Caption;
                                     if (btDflt.Caption.ToLower() == "update")
                                     {
-                                        FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, false);
+                                        if (oForm.Items.Item("BtCSV").Enabled && oForm.Items.Item("BtCSV").Enabled)
+                                        {
+                                            FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, false);
+                                        }
                                     }
                                     if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_OK_MODE)
                                     {
-                                        FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, true);
+                                        if (!oForm.Items.Item("BtCSV").Enabled && !oForm.Items.Item("BtCSV").Enabled)
+                                        {
+                                            FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, true);
+                                        }
                                     }
                                 }
                             }
@@ -756,165 +778,173 @@ namespace EFakturCoretax.FormHandlers
 
                     if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_VALIDATE)
                     {
-                        SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(pVal.FormUID);
-                        SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
-                        if (pVal.BeforeAction)
+                        try
                         {
-                            //if (pVal.ItemUID == "TFromDt")
-                            //{
-                            //    string strDate = oDBDS_Header.GetValue("U_T2_From_Date", 0).Trim();
-                            //    if (DateTime.TryParseExact(strDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate)) oldFromDt = parsedDate;
-                            //}
-                            //if (pVal.ItemUID == "TToDt")
-                            //{
-                            //    string strDate = oDBDS_Header.GetValue("U_T2_To_Date", 0).Trim();
-                            //    if (DateTime.TryParseExact(strDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate)) oldToDt = parsedDate;
-                            //}
-                            //if (pVal.ItemUID == "TFromDoc")
-                            //{
-                            //    string strDocEntry = oDBDS_Header.GetValue("U_T2_From_Doc_Entry", 0).Trim();
-                            //    if (int.TryParse(strDocEntry, out int parsedVal)) oldFromDocEntry = parsedVal;
-                            //}
-                            //if (pVal.ItemUID == "TToDoc")
-                            //{
-                            //    string strDocEntry = oDBDS_Header.GetValue("U_T2_To_Doc_Entry", 0).Trim();
-                            //    if (int.TryParse(strDocEntry, out int parsedVal)) oldToDocEntry = parsedVal;
-                            //}
-                            //if (pVal.ItemUID == "TFromCust")
-                            //{
-                            //    oldFromCust = oDBDS_Header.GetValue("U_T2_From_Cust", 0).Trim();
-                            //}
-                            //if (pVal.ItemUID == "TToCust")
-                            //{
-                            //    oldToCust = oDBDS_Header.GetValue("U_T2_To_Cust", 0).Trim();
-                            //}
+                            SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(pVal.FormUID);
+                            SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
+                            if (pVal.BeforeAction)
+                            {
+                                //if (pVal.ItemUID == "TFromDt")
+                                //{
+                                //    string strDate = oDBDS_Header.GetValue("U_T2_From_Date", 0).Trim();
+                                //    if (DateTime.TryParseExact(strDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate)) oldFromDt = parsedDate;
+                                //}
+                                //if (pVal.ItemUID == "TToDt")
+                                //{
+                                //    string strDate = oDBDS_Header.GetValue("U_T2_To_Date", 0).Trim();
+                                //    if (DateTime.TryParseExact(strDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate)) oldToDt = parsedDate;
+                                //}
+                                //if (pVal.ItemUID == "TFromDoc")
+                                //{
+                                //    string strDocEntry = oDBDS_Header.GetValue("U_T2_From_Doc_Entry", 0).Trim();
+                                //    if (int.TryParse(strDocEntry, out int parsedVal)) oldFromDocEntry = parsedVal;
+                                //}
+                                //if (pVal.ItemUID == "TToDoc")
+                                //{
+                                //    string strDocEntry = oDBDS_Header.GetValue("U_T2_To_Doc_Entry", 0).Trim();
+                                //    if (int.TryParse(strDocEntry, out int parsedVal)) oldToDocEntry = parsedVal;
+                                //}
+                                //if (pVal.ItemUID == "TFromCust")
+                                //{
+                                //    oldFromCust = oDBDS_Header.GetValue("U_T2_From_Cust", 0).Trim();
+                                //}
+                                //if (pVal.ItemUID == "TToCust")
+                                //{
+                                //    oldToCust = oDBDS_Header.GetValue("U_T2_To_Cust", 0).Trim();
+                                //}
+                            }
+                            else if (!pVal.BeforeAction)
+                            {
+                                //if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_OK_MODE)
+                                //{
+                                //    FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, true);
+                                //}
+                                //else
+                                //{
+                                //    FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, false);
+                                //}
+
+                                if (pVal.ItemUID == "TFromDt" || pVal.ItemUID == "TToDt")
+                                {
+                                    string strFromDate = oDBDS_Header.GetValue("U_T2_From_Date", 0).Trim();
+                                    string strToDate = oDBDS_Header.GetValue("U_T2_To_Date", 0).Trim();
+                                    DateTime? newFromDate = null;
+                                    DateTime? newToDate = null;
+                                    if (DateTime.TryParseExact(strFromDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate)) newFromDate = parsedDate;
+                                    if (DateTime.TryParseExact(strToDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedToDate)) newToDate = parsedToDate;
+                                    if (pVal.ItemUID == "TFromDt")
+                                    {
+                                        if ((oldFromDt != newFromDate))
+                                        {
+                                            ResetDetail(oForm);
+                                            oldFromDt = newFromDate;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if ((oldToDt != newToDate))
+                                        {
+                                            ResetDetail(oForm);
+                                            oldToDt = newToDate;
+                                        }
+                                    }
+                                    // Checkbox logic
+                                    if (newFromDate == null && newToDate == null)
+                                        FormHelper.SetValueDS(oForm, "CkDtDS", "Y");
+                                    else
+                                        FormHelper.SetValueDS(oForm, "CkDtDS", "N");
+                                }
+
+                                if (pVal.ItemUID == "TFromDoc" || pVal.ItemUID == "TToDoc")
+                                {
+                                    string strFromEntry = oDBDS_Header.GetValue("U_T2_From_Doc_Entry", 0).Trim();
+                                    string strToEntry = oDBDS_Header.GetValue("U_T2_To_Doc_Entry", 0).Trim();
+                                    int newFromEntry = 0;
+                                    int newToEntry = 0;
+                                    if (int.TryParse(strFromEntry, out int parsedFromEntry)) newFromEntry = parsedFromEntry;
+                                    if (int.TryParse(strToEntry, out int parsedToEntry)) newToEntry = parsedToEntry;
+                                    if (pVal.ItemUID == "TFromDoc")
+                                    {
+                                        if ((oldFromDocEntry != newFromEntry))
+                                        {
+                                            ResetDetail(oForm);
+                                            oldFromDocEntry = newFromEntry;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if ((oldToDocEntry != newToEntry))
+                                        {
+                                            ResetDetail(oForm);
+                                            oldToDocEntry = newToEntry;
+                                        }
+                                    }
+
+                                    // Checkbox logic
+                                    if (newFromEntry == 0 && newToEntry == 0)
+                                        FormHelper.SetValueDS(oForm, "CkDocDS", "Y");
+                                    else
+                                        FormHelper.SetValueDS(oForm, "CkDocDS", "N");
+                                }
+
+                                if (pVal.ItemUID == "TFromCust" || pVal.ItemUID == "TToCust")
+                                {
+                                    string newFromCust = oDBDS_Header.GetValue("U_T2_From_Cust", 0).Trim();
+                                    string newToCust = oDBDS_Header.GetValue("U_T2_To_Cust", 0).Trim();
+                                    if (pVal.ItemUID == "TFromCust")
+                                    {
+                                        if ((oldFromCust != newFromCust))
+                                        {
+                                            ResetDetail(oForm);
+                                            oldFromCust = newFromCust;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if ((oldToCust != newToCust))
+                                        {
+                                            ResetDetail(oForm);
+                                            oldToCust = newToCust;
+                                        }
+                                    }
+
+                                    // Checkbox logic
+                                    if (string.IsNullOrEmpty(newFromCust) && string.IsNullOrEmpty(newToCust))
+                                        FormHelper.SetValueDS(oForm, "CkCustDS", "Y");
+                                    else
+                                        FormHelper.SetValueDS(oForm, "CkCustDS", "N");
+                                }
+
+                                if (pVal.ItemUID == "TVatRate")
+                                {
+                                    decimal newVatRate = 0;
+                                    if (decimal.TryParse(
+                                            oDBDS_Header.GetValue("U_T2_Coretax_Vat_Rate", 0)?.Trim(),
+                                            NumberStyles.Any,
+                                            CultureInfo.InvariantCulture,
+                                            out decimal parsedDecimal))
+                                    {
+                                        newVatRate = parsedDecimal;
+                                    }
+                                    if (oldVatRate != newVatRate)
+                                    {
+                                        SAPbouiCOM.DBDataSource oDBDS_Detail = oForm.DataSources.DBDataSources.Item("@T2_CORETAX_DT");
+                                        // Clear Detail
+                                        while (oDBDS_Detail.Size > 0)
+                                        {
+                                            oDBDS_Detail.RemoveRecord(0);
+                                        }
+                                        oDBDS_Detail.Clear();  // extra reset
+                                        FormHelper.ClearMatrix(oForm, "MtDetail", "DT_DETAIL", "@T2_CORETAX_DT");
+                                        oldVatRate = newVatRate;
+                                    }
+                                }
+                            }
                         }
-                        else if (!pVal.BeforeAction)
+                        catch (Exception)
                         {
-                            if (oForm.Mode == SAPbouiCOM.BoFormMode.fm_OK_MODE)
-                            {
-                                FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, true);
-                            }
-                            else
-                            {
-                                FormHelper.SetEnabled(oForm, new[] { "BtCSV", "BtXML" }, false);
-                            }
 
-                            if (pVal.ItemUID == "TFromDt" || pVal.ItemUID == "TToDt")
-                            {
-                                string strFromDate = oDBDS_Header.GetValue("U_T2_From_Date", 0).Trim();
-                                string strToDate = oDBDS_Header.GetValue("U_T2_To_Date", 0).Trim();
-                                DateTime? newFromDate = null;
-                                DateTime? newToDate = null;
-                                if (DateTime.TryParseExact(strFromDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate)) newFromDate = parsedDate;
-                                if (DateTime.TryParseExact(strToDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedToDate)) newToDate = parsedToDate;
-                                if (pVal.ItemUID == "TFromDt")
-                                {
-                                    if ((oldFromDt != newFromDate))
-                                    {
-                                        ResetDetail(oForm);
-                                        oldFromDt = newFromDate;
-                                    }
-                                }
-                                else
-                                {
-                                    if ((oldToDt != newToDate))
-                                    {
-                                        ResetDetail(oForm);
-                                        oldToDt = newToDate;
-                                    }
-                                }
-                                // Checkbox logic
-                                if (newFromDate == null && newToDate == null)
-                                    FormHelper.SetValueDS(oForm, "CkDtDS", "Y");
-                                else
-                                    FormHelper.SetValueDS(oForm, "CkDtDS", "N");
-                            }
-
-                            if (pVal.ItemUID == "TFromDoc" || pVal.ItemUID == "TToDoc")
-                            {
-                                string strFromEntry = oDBDS_Header.GetValue("U_T2_From_Doc_Entry", 0).Trim();
-                                string strToEntry = oDBDS_Header.GetValue("U_T2_To_Doc_Entry", 0).Trim();
-                                int newFromEntry = 0;
-                                int newToEntry = 0;
-                                if (int.TryParse(strFromEntry, out int parsedFromEntry)) newFromEntry = parsedFromEntry;
-                                if (int.TryParse(strToEntry, out int parsedToEntry)) newToEntry = parsedToEntry;
-                                if (pVal.ItemUID == "TFromDoc")
-                                {
-                                    if ((oldFromDocEntry != newFromEntry))
-                                    {
-                                        ResetDetail(oForm);
-                                        oldFromDocEntry = newFromEntry;
-                                    }
-                                }
-                                else
-                                {
-                                    if ((oldToDocEntry != newToEntry))
-                                    {
-                                        ResetDetail(oForm);
-                                        oldToDocEntry = newToEntry;
-                                    }
-                                }
-
-                                // Checkbox logic
-                                if (newFromEntry == 0 && newToEntry == 0)
-                                    FormHelper.SetValueDS(oForm, "CkDocDS", "Y");
-                                else
-                                    FormHelper.SetValueDS(oForm, "CkDocDS", "N");
-                            }
-
-                            if (pVal.ItemUID == "TFromCust" || pVal.ItemUID == "TToCust")
-                            {
-                                string newFromCust = oDBDS_Header.GetValue("U_T2_From_Cust", 0).Trim();
-                                string newToCust = oDBDS_Header.GetValue("U_T2_To_Cust", 0).Trim();
-                                if (pVal.ItemUID == "TFromCust")
-                                {
-                                    if ((oldFromCust != newFromCust))
-                                    {
-                                        ResetDetail(oForm);
-                                        oldFromCust = newFromCust;
-                                    }
-                                }
-                                else
-                                {
-                                    if ((oldToCust != newToCust))
-                                    {
-                                        ResetDetail(oForm);
-                                        oldToCust = newToCust;
-                                    }
-                                }
-
-                                // Checkbox logic
-                                if (string.IsNullOrEmpty(newFromCust) && string.IsNullOrEmpty(newToCust))
-                                    FormHelper.SetValueDS(oForm, "CkCustDS", "Y");
-                                else
-                                    FormHelper.SetValueDS(oForm, "CkCustDS", "N");
-                            }
-
-                            if (pVal.ItemUID == "TVatRate")
-                            {
-                                decimal newVatRate = 0;
-                                if (decimal.TryParse(
-                                        oDBDS_Header.GetValue("U_T2_Coretax_Vat_Rate", 0)?.Trim(),
-                                        NumberStyles.Any,
-                                        CultureInfo.InvariantCulture,
-                                        out decimal parsedDecimal))
-                                {
-                                    newVatRate = parsedDecimal;
-                                }
-                                if (oldVatRate != newVatRate)
-                                {
-                                    SAPbouiCOM.DBDataSource oDBDS_Detail = oForm.DataSources.DBDataSources.Item("@T2_CORETAX_DT");
-                                    // Clear Detail
-                                    while (oDBDS_Detail.Size > 0)
-                                    {
-                                        oDBDS_Detail.RemoveRecord(0);
-                                    }
-                                    oDBDS_Detail.Clear();  // extra reset
-                                    FormHelper.ClearMatrix(oForm, "MtDetail", "DT_DETAIL", "@T2_CORETAX_DT");
-                                    oldVatRate = newVatRate;
-                                }
-                            }
+                            throw;
                         }
                     }
 
@@ -1499,34 +1529,48 @@ namespace EFakturCoretax.FormHandlers
                 }
                 if (oCFLEvent.ChooseFromListUID == "CflCustFrom")
                 {
-                    SAPbouiCOM.DataTable oDataTable = oCFLEvent.SelectedObjects;
-                    SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
-
-                    if (oDataTable != null && oDataTable.Rows.Count > 0)
+                    try
                     {
-                        // Get values from the selected row
-                        string code = oDataTable.GetValue("CardCode", 0).ToString();
-                        string currCode = oDBDS_Header.GetValue("U_T2_From_Cust", 0).Trim();
-                        if (code != currCode)
+                        SAPbouiCOM.DataTable oDataTable = oCFLEvent.SelectedObjects;
+                        SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
+
+                        if (oDataTable != null && oDataTable.Rows.Count > 0)
                         {
-                            oDBDS_Header.SetValue("U_T2_From_Cust", 0, code);
+                            // Get values from the selected row
+                            string code = oDataTable.GetValue("CardCode", 0).ToString();
+                            string currCode = oDBDS_Header.GetValue("U_T2_From_Cust", 0).Trim();
+                            if (code != currCode)
+                            {
+                                oDBDS_Header.SetValue("U_T2_From_Cust", 0, code);
+                            }
                         }
+                    }
+                    catch
+                    {
+
                     }
                 }
                 if (oCFLEvent.ChooseFromListUID == "CflCustTo")
                 {
-                    SAPbouiCOM.DataTable oDataTable = oCFLEvent.SelectedObjects;
-                    SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
-
-                    if (oDataTable != null && oDataTable.Rows.Count > 0)
+                    try
                     {
-                        // Get values from the selected row
-                        string code = oDataTable.GetValue("CardCode", 0).ToString();
-                        string currCode = oDBDS_Header.GetValue("U_T2_To_Cust", 0).Trim();
-                        if (currCode != code)
+                        SAPbouiCOM.DataTable oDataTable = oCFLEvent.SelectedObjects;
+                        SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
+
+                        if (oDataTable != null && oDataTable.Rows.Count > 0)
                         {
-                            oDBDS_Header.SetValue("U_T2_To_Cust", 0, code);
+                            // Get values from the selected row
+                            string code = oDataTable.GetValue("CardCode", 0).ToString();
+                            string currCode = oDBDS_Header.GetValue("U_T2_To_Cust", 0).Trim();
+                            if (currCode != code)
+                            {
+                                oDBDS_Header.SetValue("U_T2_To_Cust", 0, code);
+                            }
                         }
+                    }
+                    catch 
+                    {
+
                     }
                 }
             }
@@ -2207,11 +2251,7 @@ namespace EFakturCoretax.FormHandlers
                                 oDBDS_Detail.SetValue("U_T2_DocEntry", i, detail.DocEntry ?? "");
                                 oDBDS_Detail.SetValue("U_T2_LineNum", i, detail.LineNum ?? "");
                                 DateTime parsedDate;
-                                if (DateTime.TryParseExact(detail.InvDate,
-                                                           "dd/MM/yyyy HH.mm.ss",   // your format
-                                                           CultureInfo.InvariantCulture,
-                                                           DateTimeStyles.None,
-                                                           out parsedDate))
+                                if (DateTime.TryParse(detail.InvDate, out parsedDate))
                                 {
                                     oDBDS_Detail.SetValue("U_T2_Inv_Date", i, parsedDate.ToString("yyyyMMdd"));
                                 }
