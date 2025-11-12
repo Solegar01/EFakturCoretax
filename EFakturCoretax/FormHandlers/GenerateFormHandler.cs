@@ -1605,7 +1605,6 @@ namespace EFakturCoretax.FormHandlers
                     oMatrix.CommonSetting.SetRowBackColor(i, white);
                 }
 
-                oMatrix.SelectionMode = SAPbouiCOM.BoMatrixSelect.ms_Auto;
                 oMatrix.AutoResizeColumns();
             }
             catch (Exception)
@@ -2557,7 +2556,11 @@ namespace EFakturCoretax.FormHandlers
 
                 // Load data into matrix
                 oMatrix.LoadFromDataSource();
-                oMatrix.SelectionMode = SAPbouiCOM.BoMatrixSelect.ms_Auto;
+                foreach (SAPbouiCOM.Column col in oMatrix.Columns)
+                {
+                    col.TitleObject.Sortable = true;
+                }
+                
                 int white = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.White);
                 for (int i = 0; i < oMatrix.RowCount; i++)
                 {

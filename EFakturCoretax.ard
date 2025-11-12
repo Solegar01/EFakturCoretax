@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<AddOnRegData xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" SlientInstallation="No" SlientUpgrade="No" Partnernmsp="T2.EFakturCoretax" SchemaVersion="3.0" Type="" MultipleVersion="false" OnDemand="" OnPremise="" ExtName="E-Faktur Coretax" ExtVersion="1.0.0.1" Contdata="Think Tank Solusindo" Partner="Think Tank Solusindo" DBType="MSSQL" ClientType="W">
+<AddOnRegData xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" SlientInstallation="No" SlientUpgrade="No" Partnernmsp="T2.EFakturCoretax" SchemaVersion="3.0" Type="" MultipleVersion="false" OnDemand="" OnPremise="" ExtName="E-Faktur Coretax" ExtVersion="1.0.1" Contdata="Think Tank Solusindo" Partner="Think Tank Solusindo" DBType="MSSQL" ClientType="W">
   <Validity>
     <SBOCompatibility>
       <Version From="10.00.260" To="10.99.999" />

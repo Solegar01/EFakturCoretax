@@ -441,7 +441,7 @@ namespace EFakturCoretax.Services
 
         }
 
-        public static void UpdateFakturArInvoice(SAPbobsCOM.Company oCompany, string docNum, string coretaxNo)
+        public static void UpdateFakturArInvoice(SAPbobsCOM.Company oCompany, string docNum, string coretaxNo, DateTime fakturDate)
         {
             SAPbobsCOM.Documents oInvoice = null;
 
@@ -463,6 +463,7 @@ namespace EFakturCoretax.Services
                 {
                     // Set the UDF value
                     oInvoice.UserFields.Fields.Item("U_T2_FakturPajak").Value = coretaxNo;
+                    oInvoice.UserFields.Fields.Item("U_T2_TGLFG").Value = fakturDate;
 
                     // Update the invoice
                     int retCode = oInvoice.Update();
@@ -480,7 +481,7 @@ namespace EFakturCoretax.Services
 
         }
 
-        public static void UpdateFakturArDownPayment(SAPbobsCOM.Company oCompany, string docNum, string coretaxNo)
+        public static void UpdateFakturArDownPayment(SAPbobsCOM.Company oCompany, string docNum, string coretaxNo, DateTime fakturDate)
         {
             SAPbobsCOM.Documents oInvoice = null;
 
@@ -502,6 +503,7 @@ namespace EFakturCoretax.Services
                 {
                     // Set the UDF value
                     oInvoice.UserFields.Fields.Item("U_T2_FakturPajak").Value = coretaxNo;
+                    oInvoice.UserFields.Fields.Item("U_T2_TGLFG").Value = fakturDate;
 
                     // Update the invoice
                     int retCode = oInvoice.Update();
@@ -519,7 +521,7 @@ namespace EFakturCoretax.Services
 
         }
 
-        public static void UpdateFakturArCreditMemo(SAPbobsCOM.Company oCompany, string docNum, string coretaxNo)
+        public static void UpdateFakturArCreditMemo(SAPbobsCOM.Company oCompany, string docNum, string coretaxNo, DateTime fakturDate)
         {
             SAPbobsCOM.Documents oInvoice = null;
 
@@ -541,6 +543,7 @@ namespace EFakturCoretax.Services
                 {
                     // Set the UDF value
                     oInvoice.UserFields.Fields.Item("U_T2_FakturPajak").Value = coretaxNo;
+                    oInvoice.UserFields.Fields.Item("U_T2_TGLFG").Value = fakturDate;
 
                     // Update the invoice
                     int retCode = oInvoice.Update();

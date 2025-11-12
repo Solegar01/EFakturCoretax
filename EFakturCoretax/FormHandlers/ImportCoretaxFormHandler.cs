@@ -152,6 +152,7 @@ namespace EFakturCoretax.FormHandlers
             {
                 FormHelper.StartLoading(oForm, "Generating Faktur Pajak...", 0, false);
                 oCompany = CompanyService.GetCompany();
+                var dtNow = DateTime.Now;
                 if (!oCompany.InTransaction)
                 {
                     oCompany.StartTransaction();
@@ -165,19 +166,23 @@ namespace EFakturCoretax.FormHandlers
                         string objCode = "";
                         string tempDocNum = oDT.GetValue("Col_0", i).ToString();
                         string coretaxNo = oDT.GetValue("Col_1", i).ToString();
+                        if (!tempDocNum.Contains("-"))
+                        {
+                            throw new Exception("Invoice No. invalid format.");
+                        }
                         var tempArr = tempDocNum.Split('-');
                         objCode = tempArr[0];
                         docNum = tempArr[1];
                         switch (objCode)
                         {
                             case "IN":
-                                TransactionService.UpdateFakturArInvoice(oCompany, docNum, coretaxNo);
+                                TransactionService.UpdateFakturArInvoice(oCompany, docNum, coretaxNo, dtNow);
                                 break;
                             case "DP":
-                                TransactionService.UpdateFakturArDownPayment(oCompany, docNum, coretaxNo);
+                                TransactionService.UpdateFakturArDownPayment(oCompany, docNum, coretaxNo, dtNow);
                                 break;
                             case "CN":
-                                TransactionService.UpdateFakturArCreditMemo(oCompany, docNum, coretaxNo);
+                                TransactionService.UpdateFakturArCreditMemo(oCompany, docNum, coretaxNo, dtNow);
                                 break;
                             default:
                                 break;
