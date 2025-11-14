@@ -948,27 +948,16 @@ namespace EFakturCoretax.FormHandlers
                         }
                     }
 
-                    if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_CLICK && !pVal.BeforeAction)
+                    if (pVal.ItemUID == "MtFind" && pVal.EventType == SAPbouiCOM.BoEventTypes.et_CLICK && pVal.BeforeAction == false && pVal.ColUID == "Col_10")
                     {
                         SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(pVal.FormUID);
                         try
                         {
                             FormHelper.StartLoading(oForm, "Loading...", 0, false);
-                            if (oForm.Items.Count > 0)
-                            {
-                                SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
-                                var status = oDBDS_Header.GetValue("Status", 0).Trim();
-                                if (pVal.ItemUID == "MtFind" && pVal.EventType == SAPbouiCOM.BoEventTypes.et_CLICK && pVal.BeforeAction == false && pVal.ColUID == "Col_10")
-                                {
-                                    if (status != "O") return;
-                                    SelectFilterHandler(FormUID, pVal.Row);
-                                }
-                                if (pVal.ItemUID == "MtFind" && pVal.EventType == SAPbouiCOM.BoEventTypes.et_CLICK && pVal.BeforeAction == false && pVal.ColUID == "Col_11")
-                                {
-                                    if (status != "C") return;
-                                    ReviseFilterHandler(FormUID, pVal.Row);
-                                }
-                            }
+                            SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
+                            var status = oDBDS_Header.GetValue("Status", 0).Trim();
+                            if (status != "O") return;
+                            SelectFilterHandler(FormUID, pVal.Row);
                         }
                         catch (Exception)
                         {
@@ -980,6 +969,60 @@ namespace EFakturCoretax.FormHandlers
                             FormHelper.FinishLoading(oForm);
                         }
                     }
+                    if (pVal.ItemUID == "MtFind" && pVal.EventType == SAPbouiCOM.BoEventTypes.et_CLICK && pVal.BeforeAction == false && pVal.ColUID == "Col_11")
+                    {
+                        SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(pVal.FormUID);
+                        try
+                        {
+                            SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
+                            var status = oDBDS_Header.GetValue("Status", 0).Trim();
+                            FormHelper.StartLoading(oForm, "Loading...", 0, false);
+                            if (status != "C") return;
+                            ReviseFilterHandler(FormUID, pVal.Row);
+                        }
+                        catch (Exception)
+                        {
+
+                            throw;
+                        }
+                        finally
+                        {
+                            FormHelper.FinishLoading(oForm);
+                        }
+                    }
+
+                    //if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_CLICK && !pVal.BeforeAction)
+                    //{
+                    //    SAPbouiCOM.Form oForm = Application.SBO_Application.Forms.Item(pVal.FormUID);
+                    //    try
+                    //    {
+                    //        FormHelper.StartLoading(oForm, "Loading...", 0, false);
+                    //        if (oForm.Items.Count > 0)
+                    //        {
+                    //            SAPbouiCOM.DBDataSource oDBDS_Header = oForm.DataSources.DBDataSources.Item("@T2_CORETAX");
+                    //            var status = oDBDS_Header.GetValue("Status", 0).Trim();
+                    //            if (pVal.ItemUID == "MtFind" && pVal.EventType == SAPbouiCOM.BoEventTypes.et_CLICK && pVal.BeforeAction == false && pVal.ColUID == "Col_10")
+                    //            {
+                    //                if (status != "O") return;
+                    //                SelectFilterHandler(FormUID, pVal.Row);
+                    //            }
+                    //            if (pVal.ItemUID == "MtFind" && pVal.EventType == SAPbouiCOM.BoEventTypes.et_CLICK && pVal.BeforeAction == false && pVal.ColUID == "Col_11")
+                    //            {
+                    //                if (status != "C") return;
+                    //                ReviseFilterHandler(FormUID, pVal.Row);
+                    //            }
+                    //        }
+                    //    }
+                    //    catch (Exception)
+                    //    {
+
+                    //        throw;
+                    //    }
+                    //    finally
+                    //    {
+                    //        FormHelper.FinishLoading(oForm);
+                    //    }
+                    //}
 
                     if (pVal.EventType == SAPbouiCOM.BoEventTypes.et_COMBO_SELECT)
                     {
